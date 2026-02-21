@@ -1,0 +1,103 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "name": "pixel6a-activity-monitor",
+  "theme": "mint",
+  "navigation": [
+    {
+      "group": "Start",
+      "pages": [
+        "index",
+        "start/getting-started",
+        "start/quickstart",
+        "start/hubs",
+        "start/docs-directory",
+        "start/plan"
+      ]
+    },
+    {
+      "group": "Tools",
+      "pages": ["tools/index", "tools/codex-multi-agent"]
+    },
+    {
+      "group": "Reference",
+      "pages": [
+        "reference/index",
+        "reference/docs-style",
+        "reference/env-vars",
+        "reference/dod",
+        "reference/test",
+        "reference/templates/index",
+        "reference/templates/AGENTS",
+        "reference/templates/SOUL",
+        "reference/templates/USER",
+        "reference/templates/IDENTITY",
+        "reference/templates/TOOLS",
+        "reference/templates/HEARTBEAT",
+        "reference/templates/BOOTSTRAP"
+      ]
+    },
+    {
+      "group": "Concepts",
+      "pages": ["concepts/index", "concepts/architecture"]
+    },
+    {
+      "group": "Gateway",
+      "pages": ["gateway/index"]
+    },
+    {
+      "group": "Web",
+      "pages": ["web/index"]
+    },
+    {
+      "group": "Help",
+      "pages": [
+        "help/index",
+        "help/issue-plan-pr",
+        "help/agent-workflow",
+        "help/parallel-implementation",
+        "help/repo-governance",
+        "help/testing",
+        "help/preflight-check",
+        "help/local-ci-with-act",
+        "help/troubleshooting"
+      ]
+    },
+    {
+      "group": "Experiments",
+      "pages": [
+        "experiments/index",
+        "experiments/plans/index",
+        "experiments/plans/pixel6a-activity-monitor-mvp",
+        "experiments/plans/template"
+      ]
+    },
+    {
+      "group": "Automation",
+      "pages": ["automation/index", "automation/cron-jobs"]
+    },
+    {
+      "group": "Channels",
+      "pages": ["channels/index", "channels/slack"]
+    },
+    {
+      "group": "CLI",
+      "pages": ["cli/index", "cli/runbook"]
+    },
+    {
+      "group": "Install",
+      "pages": ["install/index", "install/prereqs"]
+    },
+    {
+      "group": "Nodes",
+      "pages": ["nodes/index", "nodes/pixel6a-termux"]
+    },
+    {
+      "group": "Platforms",
+      "pages": ["platforms/index"]
+    },
+    {
+      "group": "Providers",
+      "pages": ["providers/index", "providers/google-sheets"]
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+name: docs-check
+
+on:
+  pull_request:
+  push:
+    branches: ["main", "master"]
+
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate frontmatter keys in docs
+        run: ./scripts/ci/docs-check.sh

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Issue Planner"
+  short_description: "Split a plan into scoped and testable issues"
+  default_prompt: "Use $issue-planning to split a plan doc into independent issues with acceptance criteria and verification steps."

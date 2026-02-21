@@ -1,0 +1,27 @@
+"type:docs":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "docs/**"
+          - "**/*.md"
+
+"type:ci":
+  - changed-files:
+      - any-glob-to-any-file:
+          - ".github/workflows/**"
+          - "scripts/ci/**"
+
+"area:agents":
+  - changed-files:
+      - any-glob-to-any-file:
+          - ".codex/**"
+          - ".agents/**"
+          - "AGENTS.md"
+
+"area:pr-workflow":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "scripts/pr*"
+          - ".agents/skills/PR_WORKFLOW.md"
+          - ".agents/skills/review-pr/**"
+          - ".agents/skills/prepare-pr/**"
+          - ".agents/skills/merge-pr/**"

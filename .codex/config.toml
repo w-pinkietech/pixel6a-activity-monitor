@@ -1,0 +1,36 @@
+[features]
+multi_agent = true
+
+[agents]
+max_threads = 4
+
+[agents.default]
+description = "Lightweight fallback agent; prefer specialized subagents."
+
+[agents.explorer]
+description = "Read-only exploration agent for quick codebase and docs investigation."
+config_file = "agents/explorer.toml"
+
+[agents.planner]
+description = "Plan authoring agent for docs/experiments/plans."
+config_file = "agents/planner.toml"
+
+[agents.issue_planner]
+description = "Issue slicing agent that converts plans into scoped issue units."
+config_file = "agents/issue_planner.toml"
+
+[agents.implementer]
+description = "Implementation agent for one scoped issue from an approved plan."
+config_file = "agents/implementer.toml"
+
+[agents.pr_reviewer]
+description = "PR review-only agent that must initialize artifacts via scripts/pr-review."
+config_file = "agents/pr_reviewer.toml"
+
+[agents.pr_preparer]
+description = "PR preparation agent that resolves findings and runs local gates via scripts/pr-prepare."
+config_file = "agents/pr_preparer.toml"
+
+[agents.pr_merger]
+description = "Final merge-gate agent that verifies readiness and merges via scripts/pr-merge."
+config_file = "agents/pr_merger.toml"

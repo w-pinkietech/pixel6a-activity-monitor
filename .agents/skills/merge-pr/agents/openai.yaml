@@ -1,0 +1,4 @@
+interface:
+  display_name: "Merge PR"
+  short_description: "Run final checks and merge when safe"
+  default_prompt: "Use $merge-pr only after $review-pr and $prepare-pr, and provide an explicit GO/NO-GO decision."

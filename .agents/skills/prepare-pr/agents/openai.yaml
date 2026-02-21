@@ -1,0 +1,4 @@
+interface:
+  display_name: "Prepare PR"
+  short_description: "Apply review findings and prepare PR for merge"
+  default_prompt: "Use $prepare-pr to resolve BLOCKER/IMPORTANT findings, run local CI with act, and summarize verification."

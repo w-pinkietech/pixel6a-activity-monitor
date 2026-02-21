@@ -1,0 +1,4 @@
+interface:
+  display_name: "Plan Writer"
+  short_description: "Write implementation plans under docs/experiments/plans"
+  default_prompt: "Use $planner to create or update docs/experiments/plans with clear goals, scope, tests, and risks."

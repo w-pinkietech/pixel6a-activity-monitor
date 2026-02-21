@@ -1,0 +1,78 @@
+name: Bug report
+description: Report a defect or unexpected behavior.
+title: "[Bug]: "
+labels:
+  - type:bug
+  - status:triage
+body:
+  - type: markdown
+    attributes:
+      value: |
+        再現可能な最短手順とログを優先してください。
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: 何が壊れているかを1文で。
+      placeholder: Slack通知が送信されず、ジョブが成功扱いになる。
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: 最短再現手順。
+      placeholder: |
+        1. cronジョブを起動
+        2. Sheets更新後に通知処理へ進む
+        3. Slack APIが失敗
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: 正常時にどうなるべきか。
+      placeholder: 通知失敗時はジョブ全体を失敗扱いにし、再試行される。
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: 実際に起きたこと。
+      placeholder: 通知失敗でも処理が成功終了し、再試行されない。
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: OS/Runtime/関連サービスの情報。
+      placeholder: Ubuntu 24.04, Node 22, Slack Bot Token
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / Evidence
+      description: 必要箇所をマスクしたログ。
+      render: shell
+  - type: textarea
+    id: impact
+    attributes:
+      label: Impact and severity
+      description: 影響範囲と重要度。
+      placeholder: |
+        Affected: 通知運用全体
+        Severity: High
+        Frequency: Intermittent
+        Consequence: 重要通知の欠落
+    validations:
+      required: true
+  - type: textarea
+    id: plan_link
+    attributes:
+      label: Plan link
+      description: 関連Planのパス。
+      placeholder: docs/experiments/plans/pixel6a-activity-monitor-mvp.md

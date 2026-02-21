@@ -1,0 +1,42 @@
+name: Chore
+description: Maintenance/docs/infra task
+title: "[Chore]: "
+labels:
+  - type:chore
+  - status:triage
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: 何を整備するか。
+      placeholder: PR運用スクリプトを更新し、DoDチェックを自動化する。
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope (In / Out)
+      description: 対象範囲と非対象。
+      placeholder: |
+        In Scope:
+        - scripts/pr*
+        - docs/help/*
+        Out of Scope:
+        - アプリ本体ロジック
+    validations:
+      required: true
+  - type: textarea
+    id: validation
+    attributes:
+      label: Validation
+      description: 検証コマンドと期待結果。
+      placeholder: ./scripts/ci/docs-check.sh と ./scripts/ci/pre-pr.sh が成功
+    validations:
+      required: true
+  - type: textarea
+    id: plan_link
+    attributes:
+      label: Plan link
+      description: 関連Planのパス。
+      placeholder: docs/experiments/plans/pixel6a-activity-monitor-mvp.md

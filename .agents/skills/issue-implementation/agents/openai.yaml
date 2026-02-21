@@ -1,0 +1,4 @@
+interface:
+  display_name: "Issue Implementation"
+  short_description: "Implement one scoped issue based on plan and run checks"
+  default_prompt: "Use $issue-implementation to implement a single issue from plan scope and run local validation before PR flow."

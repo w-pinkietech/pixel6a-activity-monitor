@@ -1,0 +1,566 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  cat <<'USAGE'
+Usage:
+  scripts/pr review-init <PR>
+  scripts/pr review-validate-artifacts <PR>
+  scripts/pr prepare-init <PR>
+  scripts/pr prepare-validate-commit <PR>
+  scripts/pr prepare-gates <PR>
+  scripts/pr prepare-push <PR> [--execute]
+  scripts/pr prepare-run <PR>
+  scripts/pr merge-verify <PR>
+  scripts/pr merge-run <PR> [--execute]
+USAGE
+}
+
+require_pr() {
+  if [ "$#" -lt 1 ]; then
+    echo "missing PR number or URL"
+    usage
+    exit 1
+  fi
+}
+
+normalize_pr() {
+  local input="$1"
+  local parsed
+  parsed="$(printf '%s' "$input" | sed -n 's#^.*/pull/\([0-9][0-9]*\).*$#\1#p')"
+  if [ -n "$parsed" ]; then
+    printf '%s' "$parsed"
+  else
+    printf '%s' "$input"
+  fi
+}
+
+require_cmd() {
+  local cmd="$1"
+  command -v "$cmd" >/dev/null 2>&1 || { echo "missing required command: $cmd"; exit 1; }
+}
+
+repo_root() {
+  local script_dir
+  local common_git_dir
+  script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+  if common_git_dir=$(git -C "$script_dir" rev-parse --path-format=absolute --git-common-dir 2>/dev/null); then
+    (cd "$(dirname "$common_git_dir")" && pwd)
+    return
+  fi
+
+  (cd "$script_dir/.." && pwd)
+}
+
+enter_worktree() {
+  local pr="$1"
+  local reset_to_main="${2:-false}"
+
+  local root
+  root="$(repo_root)"
+  cd "$root"
+
+  git fetch origin main
+
+  local dir=".worktrees/pr-$pr"
+  if [ -d "$dir" ]; then
+    cd "$dir"
+    git fetch origin main
+    if [ "$reset_to_main" = "true" ]; then
+      git checkout -B "temp/pr-$pr" origin/main
+    fi
+  else
+    if git show-ref --verify --quiet "refs/heads/temp/pr-$pr"; then
+      git worktree add "$dir" "temp/pr-$pr"
+    else
+      git worktree add "$dir" -b "temp/pr-$pr" origin/main
+    fi
+    cd "$dir"
+  fi
+
+  mkdir -p .local
+}
+
+cleanup_worktree() {
+  local pr="$1"
+  local root
+  root="$(repo_root)"
+  cd "$root"
+
+  if [ -d ".worktrees/pr-$pr" ]; then
+    git worktree remove ".worktrees/pr-$pr" --force
+  fi
+
+  git branch -D "temp/pr-$pr" 2>/dev/null || true
+  git branch -D "pr-$pr" 2>/dev/null || true
+  git branch -D "pr-$pr-prep" 2>/dev/null || true
+  git branch -D "pr-$pr-verify" 2>/dev/null || true
+}
+
+pr_meta_json() {
+  local pr="$1"
+  gh pr view "$pr" --json number,title,state,isDraft,author,baseRefName,headRefName,headRefOid,headRepository,url
+}
+
+write_pr_meta_files() {
+  local json="$1"
+  printf '%s\n' "$json" > .local/pr-meta.json
+
+  cat > .local/pr-meta.env <<EOF_ENV
+PR_NUMBER=$(printf '%s\n' "$json" | jq -r .number)
+PR_URL=$(printf '%s\n' "$json" | jq -r .url)
+PR_TITLE=$(printf '%s\n' "$json" | jq -r .title)
+PR_AUTHOR=$(printf '%s\n' "$json" | jq -r '.author.login // ""')
+PR_BASE_REF=$(printf '%s\n' "$json" | jq -r .baseRefName)
+PR_HEAD_REF=$(printf '%s\n' "$json" | jq -r .headRefName)
+PR_HEAD_SHA=$(printf '%s\n' "$json" | jq -r .headRefOid)
+PR_HEAD_REPO=$(printf '%s\n' "$json" | jq -r '.headRepository.nameWithOwner // ""')
+EOF_ENV
+}
+
+ensure_review_templates() {
+  if [ ! -f .local/review.md ]; then
+    cat > .local/review.md <<'MD'
+# PR Review
+
+## TL;DR
+- Status: NEEDS WORK
+
+## Findings
+- [IMPORTANT] F1: <title>
+  - area: <path/or/component>
+  - fix: <actionable fix>
+
+## Tests
+- Ran:
+- Gaps:
+
+## Risks
+- Regression risk:
+
+## Handoff for prepare-pr
+- Must fix:
+MD
+  fi
+
+  if [ ! -f .local/review.json ]; then
+    cat > .local/review.json <<'JSON'
+{
+  "recommendation": "READY FOR /prepare-pr",
+  "findings": [],
+  "tests": {
+    "ran": [],
+    "gaps": [],
+    "result": "pass"
+  },
+  "docs": "not_applicable",
+  "changelog": "required"
+}
+JSON
+  fi
+}
+
+require_artifact() {
+  local path="$1"
+  if [ ! -s "$path" ]; then
+    echo "missing required artifact: $path"
+    exit 1
+  fi
+}
+
+wait_for_pr_head_sha() {
+  local pr="$1"
+  local expected_sha="$2"
+  local max_attempts="${3:-8}"
+  local sleep_seconds="${4:-2}"
+
+  local attempt
+  for attempt in $(seq 1 "$max_attempts"); do
+    local observed_sha
+    observed_sha="$(gh pr view "$pr" --json headRefOid --jq .headRefOid)"
+    if [ "$observed_sha" = "$expected_sha" ]; then
+      return 0
+    fi
+    if [ "$attempt" -lt "$max_attempts" ]; then
+      sleep "$sleep_seconds"
+    fi
+  done
+  return 1
+}
+
+resolve_head_push_url() {
+  # shellcheck disable=SC1091
+  source .local/pr-meta.env
+  if [ -n "${PR_HEAD_REPO:-}" ] && [ "$PR_HEAD_REPO" != "null" ]; then
+    printf 'https://github.com/%s.git\n' "$PR_HEAD_REPO"
+    return 0
+  fi
+  git remote get-url origin
+}
+
+required_checks_json() {
+  local pr="$1"
+  local checks_json
+  checks_json="$(gh pr checks "$pr" --required --json name,bucket,state 2>/dev/null || true)"
+  if [ -z "$checks_json" ]; then
+    checks_json='[]'
+  fi
+  printf '%s\n' "$checks_json"
+}
+
+validate_required_checks_strict() {
+  local checks_json="$1"
+  local required_count
+  required_count="$(printf '%s\n' "$checks_json" | jq 'length')"
+  if [ "$required_count" -eq 0 ]; then
+    echo "strict required-checks failed: no required checks configured on this PR"
+    exit 1
+  fi
+
+  local non_pass_count
+  non_pass_count="$(printf '%s\n' "$checks_json" | jq '[.[] | select(.bucket != "pass")] | length')"
+  if [ "$non_pass_count" -gt 0 ]; then
+    echo "strict required-checks failed: some required checks are not pass"
+    printf '%s\n' "$checks_json" | jq -r '.[] | "\(.bucket)\t\(.name)\t\(.state)"'
+    exit 1
+  fi
+}
+
+cmd_review_init() {
+  require_pr "$@"
+  require_cmd gh
+  require_cmd jq
+
+  local pr
+  pr="$(normalize_pr "$1")"
+  enter_worktree "$pr" true
+
+  local json
+  json="$(pr_meta_json "$pr")"
+  write_pr_meta_files "$json"
+
+  git fetch origin "pull/$pr/head:pr-$pr" --force
+
+  local merge_base
+  merge_base="$(git merge-base origin/main "pr-$pr")"
+
+  cat > .local/review-context.env <<EOF_ENV
+PR_NUMBER=$pr
+MERGE_BASE=$merge_base
+REVIEW_STARTED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+EOF_ENV
+
+  ensure_review_templates
+
+  echo "worktree=$PWD"
+  echo "review artifacts ready: .local/review.md .local/review.json .local/pr-meta.env .local/pr-meta.json"
+  echo "next: fill findings, then run scripts/pr-prepare init $pr"
+}
+
+cmd_review_validate_artifacts() {
+  require_pr "$@"
+  local pr
+  pr="$(normalize_pr "$1")"
+  enter_worktree "$pr" false
+
+  require_artifact .local/review.md
+  require_artifact .local/review.json
+  require_artifact .local/pr-meta.env
+
+  require_cmd jq
+  jq . .local/review.json >/dev/null
+
+  local invalid_severity_count
+  invalid_severity_count="$(jq '[.findings[]? | select((.severity // "") != "BLOCKER" and (.severity // "") != "IMPORTANT" and (.severity // "") != "NIT")] | length' .local/review.json)"
+  if [ "$invalid_severity_count" -gt 0 ]; then
+    echo "invalid severity in .local/review.json (allowed: BLOCKER, IMPORTANT, NIT)"
+    exit 1
+  fi
+
+  echo "review artifacts validated"
+}
+
+cmd_prepare_init() {
+  require_pr "$@"
+  local pr
+  pr="$(normalize_pr "$1")"
+  enter_worktree "$pr" false
+
+  require_artifact .local/review.md
+  require_artifact .local/review.json
+  require_artifact .local/pr-meta.env
+
+  # shellcheck disable=SC1091
+  source .local/pr-meta.env
+
+  git fetch origin "pull/$pr/head:pr-$pr" --force
+  git checkout -B "pr-$pr-prep" "pr-$pr"
+  git fetch origin main
+  git rebase origin/main
+
+  local unresolved
+  unresolved="$(jq -r '.findings[]? | select(.severity=="BLOCKER" or .severity=="IMPORTANT") | "- [\(.severity)] \(.id): \(.title)"' .local/review.json || true)"
+
+  cat > .local/prep-context.env <<EOF_ENV
+PR_NUMBER=$pr
+PR_HEAD_REF=$PR_HEAD_REF
+PR_HEAD_SHA_BEFORE=$PR_HEAD_SHA
+PREP_BRANCH=pr-$pr-prep
+PREP_STARTED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+EOF_ENV
+
+  cat > .local/prep.md <<MD
+# PR Prepare
+
+- PR: $pr
+- Date: $(date -u +%Y-%m-%dT%H:%M:%SZ)
+
+## Required findings
+${unresolved:-"- none"}
+
+## Changes made
+- 
+
+## Validation
+- [ ] ./scripts/ci/pre-pr.sh
+- [ ] ./scripts/ci/pre-pr-report.sh
+- [ ] ./scripts/ci/check-dod.sh .local/prep.md
+
+## Remaining items
+- 
+MD
+
+  echo "prepare artifact ready: .local/prep.md"
+}
+
+cmd_prepare_validate_commit() {
+  require_pr "$@"
+  local pr
+  pr="$(normalize_pr "$1")"
+  enter_worktree "$pr" false
+  local branch
+  branch="$(git rev-parse --abbrev-ref HEAD)"
+  if [ "$branch" = "main" ] || [ "$branch" = "master" ]; then
+    echo "prepare-validate-commit failed: refuse to continue on $branch"
+    exit 1
+  fi
+  echo "prepare-validate-commit: OK (branch=$branch)"
+}
+
+cmd_prepare_gates() {
+  require_pr "$@"
+  local pr
+  pr="$(normalize_pr "$1")"
+  enter_worktree "$pr" false
+
+  require_artifact .local/prep.md
+  [ -x ./scripts/ci/pre-pr.sh ] || { echo "missing executable scripts/ci/pre-pr.sh"; exit 1; }
+  [ -x ./scripts/ci/pre-pr-report.sh ] || { echo "missing executable scripts/ci/pre-pr-report.sh"; exit 1; }
+  [ -x ./scripts/ci/check-dod.sh ] || { echo "missing executable scripts/ci/check-dod.sh"; exit 1; }
+
+  ./scripts/ci/pre-pr.sh
+  sed -i 's#^- \[ \] ./scripts/ci/pre-pr.sh#- [x] ./scripts/ci/pre-pr.sh#' .local/prep.md
+
+  ./scripts/ci/pre-pr-report.sh
+  sed -i 's#^- \[ \] ./scripts/ci/pre-pr-report.sh#- [x] ./scripts/ci/pre-pr-report.sh#' .local/prep.md
+
+  ./scripts/ci/check-dod.sh .local/prep.md
+  sed -i 's#^- \[ \] ./scripts/ci/check-dod.sh .local/prep.md#- [x] ./scripts/ci/check-dod.sh .local/prep.md#' .local/prep.md
+
+  cat > .local/prep.env <<EOF_ENV
+PR_NUMBER=$pr
+PREP_HEAD_SHA=$(git rev-parse HEAD)
+PREP_DONE_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+EOF_ENV
+
+  echo "gates passed"
+  echo "report artifact: .local/pre-pr-report.md"
+}
+
+cmd_prepare_push() {
+  require_pr "$@"
+  require_cmd gh
+
+  local pr
+  pr="$(normalize_pr "$1")"
+  local execute=0
+  if [ "${2:-}" = "--execute" ]; then
+    execute=1
+  fi
+
+  enter_worktree "$pr" false
+  require_artifact .local/prep-context.env
+  require_artifact .local/prep.env
+  require_artifact .local/pr-meta.env
+
+  # shellcheck disable=SC1091
+  source .local/prep-context.env
+  # shellcheck disable=SC1091
+  source .local/prep.env
+  # shellcheck disable=SC1091
+  source .local/pr-meta.env
+
+  if [ "$execute" -ne 1 ]; then
+    echo "dry-run: would push HEAD to ${PR_HEAD_REF} with force-with-lease"
+    echo "to execute: scripts/pr-prepare push $pr --execute"
+    return 0
+  fi
+
+  local push_url
+  push_url="$(resolve_head_push_url)"
+  git remote add prhead "$push_url" 2>/dev/null || git remote set-url prhead "$push_url"
+
+  local lease_sha
+  lease_sha="$(gh pr view "$pr" --json headRefOid --jq .headRefOid)"
+
+  git push --force-with-lease="refs/heads/$PR_HEAD_REF:$lease_sha" prhead "HEAD:$PR_HEAD_REF"
+
+  if ! wait_for_pr_head_sha "$pr" "$PREP_HEAD_SHA" 8 2; then
+    local observed
+    observed="$(gh pr view "$pr" --json headRefOid --jq .headRefOid)"
+    echo "push completed but PR head propagation timed out (expected=$PREP_HEAD_SHA observed=$observed)"
+    exit 1
+  fi
+
+  echo "pushed branch: $PR_HEAD_REF"
+}
+
+cmd_prepare_run() {
+  require_pr "$@"
+  local pr
+  pr="$(normalize_pr "$1")"
+  cmd_prepare_init "$pr"
+  cmd_prepare_validate_commit "$pr"
+  cmd_prepare_gates "$pr"
+  echo "PR is ready for /merge-pr"
+}
+
+cmd_merge_verify() {
+  require_pr "$@"
+  require_cmd gh
+  require_cmd jq
+
+  local pr
+  pr="$(normalize_pr "$1")"
+  enter_worktree "$pr" false
+
+  require_artifact .local/review.md
+  require_artifact .local/review.json
+  require_artifact .local/prep.md
+  require_artifact .local/prep.env
+
+  local unresolved_count
+  unresolved_count="$(jq '[.findings[]? | select(.severity=="BLOCKER" or .severity=="IMPORTANT")] | length' .local/review.json)"
+  if [ "$unresolved_count" -gt 0 ]; then
+    echo "review.json still contains BLOCKER/IMPORTANT items: $unresolved_count"
+    exit 1
+  fi
+
+  # shellcheck disable=SC1091
+  source .local/prep.env
+
+  local pr_head_sha
+  pr_head_sha="$(gh pr view "$pr" --json headRefOid --jq .headRefOid)"
+  if [ "$pr_head_sha" != "$PREP_HEAD_SHA" ]; then
+    echo "PR head changed after prepare (expected=$PREP_HEAD_SHA actual=$pr_head_sha)"
+    exit 1
+  fi
+
+  local checks_json
+  checks_json="$(required_checks_json "$pr")"
+  validate_required_checks_strict "$checks_json"
+
+  git fetch origin main
+  git fetch origin "pull/$pr/head:pr-$pr-verify" --force
+  git merge-base --is-ancestor origin/main "pr-$pr-verify" || {
+    echo "PR branch is behind main."
+    exit 1
+  }
+  git branch -D "pr-$pr-verify" 2>/dev/null || true
+
+  ./scripts/ci/pre-pr.sh
+  echo "merge verify passed"
+}
+
+cmd_merge_run() {
+  require_pr "$@"
+  require_cmd gh
+
+  local pr
+  pr="$(normalize_pr "$1")"
+  local execute=0
+  if [ "${2:-}" = "--execute" ]; then
+    execute=1
+  fi
+
+  cmd_merge_verify "$pr"
+  # shellcheck disable=SC1091
+  source .local/prep.env
+
+  if [ "$execute" -ne 1 ]; then
+    echo "dry-run: would run 'gh pr merge $pr --squash --delete-branch --match-head-commit $PREP_HEAD_SHA'"
+    echo "to execute: scripts/pr-merge run $pr --execute"
+    return 0
+  fi
+
+  gh pr merge "$pr" --squash --delete-branch --match-head-commit "$PREP_HEAD_SHA"
+
+  local state
+  state="$(gh pr view "$pr" --json state --jq .state)"
+  if [ "$state" != "MERGED" ]; then
+    echo "merge requested but PR state is $state"
+    exit 1
+  fi
+
+  cleanup_worktree "$pr"
+  echo "merge requested for PR #$pr and worktree cleaned"
+}
+
+main() {
+  if [ "$#" -lt 2 ]; then
+    usage
+    exit 2
+  fi
+
+  local cmd="$1"
+  shift
+  local pr="$1"
+  shift || true
+
+  case "$cmd" in
+    review-init)
+      cmd_review_init "$pr"
+      ;;
+    review-validate-artifacts)
+      cmd_review_validate_artifacts "$pr"
+      ;;
+    prepare-init)
+      cmd_prepare_init "$pr"
+      ;;
+    prepare-validate-commit)
+      cmd_prepare_validate_commit "$pr"
+      ;;
+    prepare-gates)
+      cmd_prepare_gates "$pr"
+      ;;
+    prepare-push)
+      cmd_prepare_push "$pr" "$@"
+      ;;
+    prepare-run)
+      cmd_prepare_run "$pr"
+      ;;
+    merge-verify)
+      cmd_merge_verify "$pr"
+      ;;
+    merge-run)
+      cmd_merge_run "$pr" "$@"
+      ;;
+    *)
+      usage
+      exit 2
+      ;;
+  esac
+}
+
+main "$@"

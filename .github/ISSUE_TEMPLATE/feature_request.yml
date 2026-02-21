@@ -1,0 +1,76 @@
+name: Feature request
+description: Propose a new capability or product improvement.
+title: "[Feature]: "
+labels:
+  - type:feature
+  - status:triage
+body:
+  - type: markdown
+    attributes:
+      value: |
+        このIssueは Plan -> 実装Issue 分割の起点です。具体例と制約を必ず書いてください。
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: 1行で何を実現したいか。
+      placeholder: Pixel 6aの位置ログを5分間隔で収集し、重複なくSheetsへ保存する。
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem to solve
+      description: 現状の課題と、なぜ今必要か。
+      placeholder: 手動記録だと抜け漏れがあり、活動判定が不正確になる。
+    validations:
+      required: true
+  - type: textarea
+    id: proposed_solution
+    attributes:
+      label: Proposed solution
+      description: 望む仕様をできるだけ具体的に。
+      placeholder: Termuxジョブで位置取得し、同一timestamp重複を除外してSheets appendする。
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope (In / Out)
+      description: In ScopeとOut of Scopeを明確に分ける。
+      placeholder: |
+        In Scope:
+        - 位置取得
+        - Sheets追記
+        Out of Scope:
+        - 地図UI
+    validations:
+      required: true
+  - type: textarea
+    id: impact
+    attributes:
+      label: Impact
+      description: 影響対象・頻度・重要度・実害を記載。
+      placeholder: |
+        Affected: Pixel 6a運用者
+        Severity: Medium
+        Frequency: Daily
+        Consequence: 活動通知の誤判定
+    validations:
+      required: true
+  - type: textarea
+    id: validation
+    attributes:
+      label: Validation plan
+      description: 完了判定に使う検証コマンド・期待結果。
+      placeholder: ./scripts/ci/pre-pr.sh が成功し、サンプルデータが1行だけ追加される。
+    validations:
+      required: true
+  - type: textarea
+    id: plan_link
+    attributes:
+      label: Plan link
+      description: 対応Planのパスを記載。
+      placeholder: docs/experiments/plans/pixel6a-activity-monitor-mvp.md
+    validations:
+      required: true

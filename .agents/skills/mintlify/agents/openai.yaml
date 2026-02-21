@@ -1,0 +1,4 @@
+interface:
+  display_name: "Mintlify Docs"
+  short_description: "Maintain docs structure, frontmatter, navigation, and links"
+  default_prompt: "Use $mintlify to update docs pages and docs/docs.json consistently, then run docs checks."

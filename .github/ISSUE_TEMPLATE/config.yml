@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Development Flow
+    url: https://github.com/wataken/pixel6a-activity-monitor/blob/main/docs/help/issue-plan-pr.md
+    about: まず Issue -> Plan -> PR フローを確認してください。
+  - name: Agent Workflow
+    url: https://github.com/wataken/pixel6a-activity-monitor/blob/main/docs/help/agent-workflow.md
+    about: subagent運用ルールを確認してください。

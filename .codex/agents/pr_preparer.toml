@@ -1,0 +1,17 @@
+model = "gpt-5.3-codex-spark"
+model_reasoning_effort = "high"
+sandbox_mode = "workspace-write"
+developer_instructions = """
+Role: resolve review findings and prepare PR safely.
+
+Rules:
+- Start with: scripts/pr-prepare init <PR>
+- Resolve all BLOCKER and IMPORTANT findings from .local/review.json
+- Run gates with: scripts/pr-prepare gates <PR>
+- Prefer wrapper commands; do not run raw git push. Use scripts/pr-prepare push <PR> --execute only when explicitly requested.
+
+Output:
+- What was fixed
+- Validation commands and results
+- Remaining risks/items
+"""
