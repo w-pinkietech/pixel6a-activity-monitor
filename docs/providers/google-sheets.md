@@ -26,6 +26,22 @@ title: "Google Sheets"
 - 失敗時は指数バックオフでリトライ
 - 重複防止のため `timestamp_utc + device_id` で一意性を確認
 
+## Implementation (MVP)
+
+実装ファイル: `openclaw/sheets_append.sh`
+
+- 入力: `P6AM_DATA_PATH` のJSONL
+- 送信先: `P6AM_SHEETS_APPEND_URL`
+- 重複管理: `P6AM_SHEETS_DEDUPE_DB`
+- 失敗キュー: `P6AM_SHEETS_RETRY_QUEUE`
+
+```bash
+P6AM_SHEETS_APPEND_URL=https://example.invalid/append \
+P6AM_SHEETS_ID=sheet-id \
+P6AM_SHEETS_TAB=raw \
+./openclaw/sheets_append.sh
+```
+
 ## Validation
 
 - 1回実行で1行追加される
