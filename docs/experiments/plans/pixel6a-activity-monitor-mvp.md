@@ -42,6 +42,10 @@ Pixel 6a (Termux) の位置情報収集、Google Sheets保存、活動判定、S
 4. Slack通知テンプレート作成
 5. cron運用と障害時リトライの導入
 
+詳細な実行順序とIssue分割は
+[Pixel6a Activity Monitor MVP Execution Plan](/experiments/plans/pixel6a-activity-monitor-mvp-execution)
+を正本として扱う。
+
 ## Tests and Verification
 
 - 収集スクリプト単体で位置データがJSONLに出力されること。
