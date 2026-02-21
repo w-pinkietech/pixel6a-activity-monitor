@@ -12,6 +12,7 @@ title: "Plan"
 
 - [Plans Hub](/experiments/plans/index)
 - [Pixel6a Activity Monitor MVP](/experiments/plans/pixel6a-activity-monitor-mvp)
+- [MVP Execution Plan](/experiments/plans/pixel6a-activity-monitor-mvp-execution)
 
 ## MVP phases
 
