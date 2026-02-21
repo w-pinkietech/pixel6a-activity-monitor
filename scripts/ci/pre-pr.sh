@@ -16,6 +16,21 @@ mkdir -p .local
 echo "Running docs check"
 ./scripts/ci/docs-check.sh
 
+echo "Running termux collector test"
+./scripts/ci/test-termux-collector.sh
+
+echo "Running sheets append test"
+./scripts/ci/test-sheets-append.sh
+
+echo "Running activity judge test"
+./scripts/ci/test-activity-judge.sh
+
+echo "Running slack notify test"
+./scripts/ci/test-slack-notify.sh
+
+echo "Running ops runtime test"
+./scripts/ci/test-ops-runtime.sh
+
 echo "Running local CI via act (event=${event}, job=${job})"
 if act "${event}" -j "${job}" 2>&1 | tee "${log_file}"; then
   cat > "${status_file}" <<EOF
