@@ -16,10 +16,20 @@ PR前の基本ゲート:
 
 ```bash
 ./scripts/ci/docs-check.sh
+./scripts/ci/test-termux-collector.sh
+./scripts/ci/test-sheets-append.sh
+./scripts/ci/test-activity-judge.sh
+./scripts/ci/test-slack-notify.sh
+./scripts/ci/test-ops-runtime.sh
 ./scripts/ci/pre-pr.sh
 ```
 
 - `docs-check.sh`: Markdown品質とリンク整合性を確認
+- `test-termux-collector.sh`: Termux収集スクリプトのJSONL出力をモックで検証
+- `test-sheets-append.sh`: Sheets追記スクリプトのdedupe/retryをモックで検証
+- `test-activity-judge.sh`: 1時間窓の距離判定と再実行安定性を検証
+- `test-slack-notify.sh`: Slack通知の重複抑止と再送をモックで検証
+- `test-ops-runtime.sh`: Tailnet事前確認、retry、ログローテーションをモックで検証
 - `pre-pr.sh`: `act` でGitHub Actions相当のローカル実行
 
 ## PR Workflow Gates
@@ -42,4 +52,3 @@ scripts/pr-merge run <PR番号> --execute
 
 - 現時点の標準ゲートは「docs + local CI再現」。
 - 実装コードのユニット/E2Eを追加したら、このページにコマンドと適用条件を追記する。
-
