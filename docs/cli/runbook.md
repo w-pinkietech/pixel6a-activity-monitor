@@ -22,15 +22,30 @@ rg --files docs | wc -l
 
 ## 3. Sheets連携手動実行
 
-実装後に、1イベントだけ送信して行追加を確認する。
+```bash
+P6AM_SHEETS_APPEND_URL=https://example.invalid/append \
+P6AM_SHEETS_ID=sheet-id \
+P6AM_SHEETS_TAB=raw \
+./openclaw/sheets_append.sh
+```
 
 ## 4. 判定・通知手動実行
 
-実装後に、サンプルデータで判定してSlack通知を1回送る。
+```bash
+P6AM_JUDGE_NOW_UTC="$(date -u +%Y-%m-%dT%H:%M:%SZ)" ./openclaw/activity_judge.sh
+P6AM_SLACK_WEBHOOK_URL=https://hooks.slack.com/services/xxx/yyy/zzz ./openclaw/slack_notify.sh
+```
 
-## 5. ロールバック
+## 5. 運用ジョブ手動実行
+
+```bash
+P6AM_TAILNET_TARGET=pixel6a ./openclaw/tailnet_precheck.sh
+P6AM_TAILNET_TARGET=pixel6a ./openclaw/judge_notify_job.sh
+./openclaw/log_rotate.sh
+```
+
+## 6. ロールバック
 
 - 自動実行を止める。
 - 問題のある変更をrevertする。
 - `docs/help/troubleshooting` に事象を追記する。
-
