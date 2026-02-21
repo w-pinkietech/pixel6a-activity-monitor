@@ -105,18 +105,36 @@ pr_meta_json() {
 
 write_pr_meta_files() {
   local json="$1"
+  local pr_number
+  local pr_url
+  local pr_title
+  local pr_author
+  local pr_base_ref
+  local pr_head_ref
+  local pr_head_sha
+  local pr_head_repo
+
+  pr_number="$(printf '%s\n' "$json" | jq -r .number)"
+  pr_url="$(printf '%s\n' "$json" | jq -r .url)"
+  pr_title="$(printf '%s\n' "$json" | jq -r .title)"
+  pr_author="$(printf '%s\n' "$json" | jq -r '.author.login // ""')"
+  pr_base_ref="$(printf '%s\n' "$json" | jq -r .baseRefName)"
+  pr_head_ref="$(printf '%s\n' "$json" | jq -r .headRefName)"
+  pr_head_sha="$(printf '%s\n' "$json" | jq -r .headRefOid)"
+  pr_head_repo="$(printf '%s\n' "$json" | jq -r '.headRepository.nameWithOwner // ""')"
+
   printf '%s\n' "$json" > .local/pr-meta.json
 
-  cat > .local/pr-meta.env <<EOF_ENV
-PR_NUMBER=$(printf '%s\n' "$json" | jq -r .number)
-PR_URL=$(printf '%s\n' "$json" | jq -r .url)
-PR_TITLE=$(printf '%s\n' "$json" | jq -r .title)
-PR_AUTHOR=$(printf '%s\n' "$json" | jq -r '.author.login // ""')
-PR_BASE_REF=$(printf '%s\n' "$json" | jq -r .baseRefName)
-PR_HEAD_REF=$(printf '%s\n' "$json" | jq -r .headRefName)
-PR_HEAD_SHA=$(printf '%s\n' "$json" | jq -r .headRefOid)
-PR_HEAD_REPO=$(printf '%s\n' "$json" | jq -r '.headRepository.nameWithOwner // ""')
-EOF_ENV
+  {
+    printf 'PR_NUMBER=%q\n' "$pr_number"
+    printf 'PR_URL=%q\n' "$pr_url"
+    printf 'PR_TITLE=%q\n' "$pr_title"
+    printf 'PR_AUTHOR=%q\n' "$pr_author"
+    printf 'PR_BASE_REF=%q\n' "$pr_base_ref"
+    printf 'PR_HEAD_REF=%q\n' "$pr_head_ref"
+    printf 'PR_HEAD_SHA=%q\n' "$pr_head_sha"
+    printf 'PR_HEAD_REPO=%q\n' "$pr_head_repo"
+  } > .local/pr-meta.env
 }
 
 ensure_review_templates() {
