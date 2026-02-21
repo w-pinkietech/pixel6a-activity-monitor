@@ -18,6 +18,22 @@ Termux上で位置情報を1分周期で取得する。
 - 収集結果をJSONLで出力する
 - タイムスタンプはUTCで記録する
 
+## Collector Script
+
+実装ファイル: `termux/collect_location.sh`
+
+```bash
+P6AM_DEVICE_ID=pixel6a \
+P6AM_DATA_PATH=data/location.jsonl \
+./termux/collect_location.sh
+```
+
+補足:
+
+- `termux-location -p gps` を呼び出して位置情報を取得する。
+- 標準出力には時刻のみ出し、緯度経度はログに出さない。
+- テスト時は `P6AM_FORCE_LOCATION_JSON` でモックpayloadを渡せる。
+
 ## Output Example
 
 ```json
