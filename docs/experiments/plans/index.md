@@ -12,8 +12,8 @@ title: "Plans"
 ## Current Plans
 
 - [Pixel6a Activity Monitor MVP](/experiments/plans/pixel6a-activity-monitor-mvp)
+- [Pixel6a Activity Monitor MVP Execution Plan](/experiments/plans/pixel6a-activity-monitor-mvp-execution)
 
 ## Template
 
 - [Plan Template](/experiments/plans/template)
-

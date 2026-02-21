@@ -68,6 +68,7 @@
         "experiments/index",
         "experiments/plans/index",
         "experiments/plans/pixel6a-activity-monitor-mvp",
+        "experiments/plans/pixel6a-activity-monitor-mvp-execution",
         "experiments/plans/template"
       ]
     },
