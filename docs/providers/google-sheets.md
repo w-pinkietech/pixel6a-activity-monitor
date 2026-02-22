@@ -13,6 +13,8 @@ title: "Google Sheets"
 
 ## Row Schema
 
+Sheets へは次の6列を保存する（`termux/collect_location.sh` の追加フィールドはローカルJSONLで保持し、MVPではSheetsには送らない）。
+
 - `timestamp_utc` (ISO8601)
 - `lat`
 - `lng`

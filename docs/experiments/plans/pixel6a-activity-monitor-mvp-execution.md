@@ -22,6 +22,7 @@ MVPの大枠Planは存在するが、実装に入るための Issue 粒度と受
 - 各Issueに受け入れ条件と最小検証コマンドを定義する。
 - PR前ゲートとDone条件を一貫運用できる状態にする。
 - OpenClaw側通知運用のためのメッセージ契約を固定する。
+- 実機収集安定化と1分間隔自動収集を追加Issueで管理する。
 
 ## Non-goals
 
@@ -43,6 +44,8 @@ MVPの大枠Planは存在するが、実装に入るための Issue 粒度と受
 3. Issue 03: 1時間単位の活動量判定ロジックを実装する。
 4. Issue 04: OpenClaw向け通知契約ドキュメントを作成する。
 5. Issue 05: cron運用とリトライ、障害時ログを整備する。
+6. Issue 15: Termux実機収集を安定化する（全項目保存 + `-r` 指定）。
+7. Issue 16: OpenClaw cron から SSH collector を1分間隔で自動実行する。
 
 ## Issue Breakdown
 
@@ -53,9 +56,38 @@ MVPの大枠Planは存在するが、実装に入るための Issue 粒度と受
   - JSONL出力と機微情報非表示ログを保証する。
 - Acceptance Criteria:
   - 1実行で1行のJSONLが追記される。
-  - `timestamp_utc`, `lat`, `lng`, `accuracy_m`, `source`, `device_id` を含む。
+  - `timestamp_utc`, `lat`, `lng`, `altitude_m`, `accuracy_m`, `vertical_accuracy_m`, `bearing_deg`, `speed_mps`, `elapsed_ms`, `provider`, `source`, `device_id` を含む。
 - Verification:
   - `./scripts/ci/test-termux-collector.sh`
+
+### Issue 15: Termux Real-device Collection Hardening
+
+- Scope:
+  - `termux/collect_location.sh` で `termux-location -r` 指定を可能にする。
+  - location payload の主要項目をJSONLへ保存する。
+  - 実機向けスモーク収集スクリプトとCIテストを追加する。
+- Acceptance Criteria:
+  - SSH経由実行で `P6AM_LOCATION_REQUEST=last` を使って収集できる。
+  - JSONLに追加項目（`altitude_m`, `vertical_accuracy_m`, `bearing_deg`, `speed_mps`, `elapsed_ms`, `provider`）が保存される。
+  - 実機で単発 + 複数回収集（smoke）を確認できる。
+- Verification:
+  - `./scripts/ci/test-termux-collector.sh`
+  - `./scripts/ci/test-termux-smoke.sh`
+  - `./scripts/ci/pre-pr.sh`
+
+### Issue 16: 1-min SSH Collector Automation
+
+- Scope:
+  - OpenClaw側 cron から Pixel 6a Termux へ SSH で collector を実行するwrapperを追加する。
+  - `timeout` とロックでハング・多重起動を防止する。
+  - cron登録手順と運用runbookを追記する。
+- Acceptance Criteria:
+  - 1分間隔で収集ジョブが実行され、`data/location.jsonl` が継続的に増加する。
+  - 失敗時に次サイクルで復帰できる。
+  - 運用者が導入手順だけで再現できる。
+- Verification:
+  - 30-60分連続運転で件数増加を確認
+  - `./scripts/ci/pre-pr.sh`
 
 ### Issue 02: Sheets Append + Dedupe
 
@@ -183,10 +215,14 @@ MVPの大枠Planは存在するが、実装に入るための Issue 粒度と受
   - #3 Activity Judge
   - #4 OpenClaw Notification Contract (Docs)
   - #5 Cron + Retry + Ops
+  - #15 Termux実機収集の安定化（全項目保存 + SSH last対応）
+  - #16 1分間隔のSSH collector自動実行（OpenClaw cron）
 - 実装進捗（local）:
   - #1 実装・テスト済み
   - #2 実装・テスト済み
   - #3 実装・テスト済み
   - #4 実装・テスト済み
   - #5 実装・テスト済み
+  - #15 実装・テスト済み（実機収集確認済み）
+  - #16 未着手
 - 実装開始条件: Issueと受け入れ条件の合意完了（Issue 01 から着手）。

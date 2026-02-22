@@ -1,7 +1,7 @@
 ---
 summary: "Plan: Pixel 6a 位置情報収集からOpenClaw通知連携までのMVPを実装する"
 owner: "wataken"
-status: "draft"
+status: "in-progress"
 last_updated: "2026-02-22"
 read_when:
   - MVP実装の着手前に方針を確認したいとき
@@ -42,6 +42,12 @@ Pixel 6a (Termux) の位置情報収集、Google Sheets保存、活動判定、O
 3. 活動量判定ロジックの実装
 4. OpenClaw向け通知仕様ドキュメント作成
 5. cron運用と障害時リトライの導入
+
+## Current Status (2026-02-22)
+
+- Core MVP（Issue #1-#5）はローカル実装・テスト済み。
+- 実機収集の安定化（Issue #15）を進行中。
+- 次は 1分間隔のSSH collector自動実行（Issue #16）でMVP要件を完了させる。
 
 詳細な実行順序とIssue分割は
 [Pixel6a Activity Monitor MVP Execution Plan](/experiments/plans/pixel6a-activity-monitor-mvp-execution)

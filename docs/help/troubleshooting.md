@@ -18,6 +18,8 @@ git status --short
 ## Decision tree
 
 - 位置情報収集が失敗する: `termux/` の実行ログと権限を確認
+  - `termux-location command not found`: Termux:API アプリ導入後、Termux で `pkg install termux-api`
+  - `location payload missing latitude/longitude`: Android側の位置情報権限と GPS 有効化を確認
 - Sheets追記が失敗する: 認証情報とAPIレスポンスを確認
 - 通知が来ない: cron実行ログとOpenClaw通知ワークフローログを確認
 - Tailnet疎通が失敗する: 次を順番に確認

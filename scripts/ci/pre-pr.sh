@@ -46,6 +46,9 @@ echo "Running docs check"
 echo "Running termux collector test"
 ./scripts/ci/test-termux-collector.sh
 
+echo "Running termux smoke test"
+./scripts/ci/test-termux-smoke.sh
+
 echo "Running sheets append test"
 ./scripts/ci/test-sheets-append.sh
 

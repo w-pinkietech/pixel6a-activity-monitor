@@ -16,6 +16,8 @@ title: "Prerequisites"
 - `node` と `pnpm` (OpenClaw連携作業用)
 - `gog` (gogcli)
 - Pixel 6a + Termux
+- Termux:API アプリ（Android側）
+- `termux-api` パッケージ（Termux側）
 - Google Sheets API を使える Google アカウント
 - OpenClaw 側で通知チャネルを設定できる環境
 
@@ -36,4 +38,10 @@ jq --version
 node --version
 pnpm --version
 gog --version
+```
+
+Pixel 6a 上での追加確認:
+
+```bash
+termux-location -p gps
 ```

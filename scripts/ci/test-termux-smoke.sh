@@ -2,7 +2,7 @@
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "$0")/../.." && pwd)"
-collector="${repo_root}/termux/collect_location.sh"
+smoke_script="${repo_root}/termux/collect_smoke.sh"
 
 tmp_dir="$(mktemp -d)"
 cleanup() {
@@ -32,23 +32,32 @@ EOF
 chmod +x "${mock_bin}/termux-location"
 
 output_path="${tmp_dir}/location.jsonl"
+run_log="${tmp_dir}/run.log"
+
 PATH="${mock_bin}:${PATH}" \
 P6AM_DATA_PATH="${output_path}" \
 P6AM_DEVICE_ID="pixel6a-test" \
-"${collector}" >/dev/null
+P6AM_SMOKE_SAMPLE_COUNT=3 \
+P6AM_SMOKE_INTERVAL_SEC=0 \
+"${smoke_script}" >"${run_log}"
 
 if [ ! -f "${output_path}" ]; then
-  echo "collector did not create output file" >&2
+  echo "smoke script did not create output file" >&2
   exit 1
 fi
 
-line_count="$(wc -l < "${output_path}")"
-if [ "${line_count}" -ne 1 ]; then
-  echo "expected 1 JSONL line, got ${line_count}" >&2
+line_count="$(wc -l < "${output_path}" | tr -d ' ')"
+if [ "${line_count}" -ne 3 ]; then
+  echo "expected 3 JSONL lines, got ${line_count}" >&2
   exit 1
 fi
 
-line="$(cat "${output_path}")"
+if ! grep -q 'smoke collection done records=3' "${run_log}"; then
+  echo "unexpected smoke script output" >&2
+  exit 1
+fi
+
+line="$(tail -n 1 "${output_path}")"
 for key in timestamp_utc lat lng altitude_m accuracy_m vertical_accuracy_m bearing_deg speed_mps elapsed_ms provider source device_id; do
   if ! printf '%s' "${line}" | grep -q "\"${key}\""; then
     echo "missing key in output: ${key}" >&2
@@ -56,14 +65,4 @@ for key in timestamp_utc lat lng altitude_m accuracy_m vertical_accuracy_m beari
   fi
 done
 
-if ! printf '%s' "${line}" | grep -q '"device_id":"pixel6a-test"'; then
-  echo "unexpected device_id in output" >&2
-  exit 1
-fi
-
-if ! printf '%s' "${line}" | grep -q '"provider":"gps"'; then
-  echo "unexpected provider in output" >&2
-  exit 1
-fi
-
-echo "termux collector test: PASS"
+echo "termux smoke test: PASS"
