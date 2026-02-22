@@ -10,13 +10,13 @@ title: "Cron Jobs"
 ## Jobs
 
 - collector: every 1 minute
-- judge-notify: every 1 hour
+- judge-notify: every 1 hour (judge実行 + OpenClaw通知連携)
 - log-rotate: once daily
 
 ## Run Order
 
 - collector は独立実行
-- judge-notify は直近1時間のデータを参照
+- judge-notify は直近1時間のデータを参照し、通知はOpenClaw側に委譲する
 - log-rotate は深夜帯に実行し古いログを削除
 
 ## Safety Rules

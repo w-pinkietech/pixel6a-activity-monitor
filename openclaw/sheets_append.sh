@@ -2,15 +2,33 @@
 set -euo pipefail
 
 data_path="${P6AM_DATA_PATH:-data/location.jsonl}"
-append_url="${P6AM_SHEETS_APPEND_URL:-}"
 sheets_id="${P6AM_SHEETS_ID:-}"
 sheets_tab="${P6AM_SHEETS_TAB:-}"
+sheets_range="${P6AM_SHEETS_RANGE:-}"
+gog_bin="${P6AM_GOG_BIN:-gog}"
+insert_mode="${P6AM_SHEETS_INSERT_MODE:-INSERT_ROWS}"
 dedupe_db="${P6AM_SHEETS_DEDUPE_DB:-data/sheets-dedupe.keys}"
 retry_queue="${P6AM_SHEETS_RETRY_QUEUE:-tmp/sheets-retry.jsonl}"
-request_timeout_sec="${P6AM_HTTP_TIMEOUT_SEC:-15}"
 
-if [ -z "${append_url}" ]; then
-  echo "P6AM_SHEETS_APPEND_URL is required" >&2
+if [ -z "${sheets_id}" ]; then
+  echo "P6AM_SHEETS_ID is required" >&2
+  exit 1
+fi
+
+if [ -z "${sheets_range}" ] && [ -n "${sheets_tab}" ]; then
+  sheets_range="${sheets_tab}!A:F"
+fi
+if [ -z "${sheets_range}" ]; then
+  echo "P6AM_SHEETS_RANGE or P6AM_SHEETS_TAB is required" >&2
+  exit 1
+fi
+
+if ! command -v "$gog_bin" >/dev/null 2>&1; then
+  echo "gog binary not found: ${gog_bin}" >&2
+  exit 1
+fi
+if ! command -v jq >/dev/null 2>&1; then
+  echo "jq is required" >&2
   exit 1
 fi
 
@@ -51,15 +69,24 @@ key_exists() {
 }
 
 send_record() {
-  local key="$1"
-  local line="$2"
-  local payload
-  payload="$(printf '{"sheet_id":"%s","sheet_tab":"%s","dedupe_key":"%s","record":%s}' \
-    "$sheets_id" "$sheets_tab" "$key" "$line")"
-  curl -fsS --max-time "$request_timeout_sec" \
-    -H "Content-Type: application/json" \
-    -X POST "$append_url" \
-    -d "$payload" >/dev/null
+  local line="$1"
+  local values_json
+  values_json="$(
+    printf '%s' "$line" | jq -c '[
+      [
+        (.timestamp_utc // ""),
+        (if .lat == null then "" else (.lat | tostring) end),
+        (if .lng == null then "" else (.lng | tostring) end),
+        (if .accuracy_m == null then "" else (.accuracy_m | tostring) end),
+        (.source // ""),
+        (.device_id // "")
+      ]
+    ]'
+  )"
+  "$gog_bin" sheets append "$sheets_id" "$sheets_range" \
+    --values-json "$values_json" \
+    --insert "$insert_mode" \
+    --no-input >/dev/null
 }
 
 queue_failure_once() {
@@ -100,7 +127,7 @@ process_file() {
       skipped=$((skipped + 1))
       continue
     fi
-    if send_record "$key" "$line"; then
+    if send_record "$line"; then
       printf '%s\n' "$key" >> "$dedupe_db"
       sent=$((sent + 1))
       continue

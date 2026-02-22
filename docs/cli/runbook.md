@@ -23,9 +23,9 @@ rg --files docs | wc -l
 ## 3. Sheets連携手動実行
 
 ```bash
-P6AM_SHEETS_APPEND_URL=https://example.invalid/append \
+P6AM_GOG_BIN=gog \
 P6AM_SHEETS_ID=sheet-id \
-P6AM_SHEETS_TAB=raw \
+P6AM_SHEETS_RANGE='raw!A:F' \
 ./openclaw/sheets_append.sh
 ```
 
@@ -33,8 +33,9 @@ P6AM_SHEETS_TAB=raw \
 
 ```bash
 P6AM_JUDGE_NOW_UTC="$(date -u +%Y-%m-%dT%H:%M:%SZ)" ./openclaw/activity_judge.sh
-P6AM_SLACK_WEBHOOK_URL=https://hooks.slack.com/services/xxx/yyy/zzz ./openclaw/slack_notify.sh
 ```
+
+通知送信は OpenClaw 側で実行する。通知メッセージ仕様は `/gateway/openclaw-notification-contract` を参照。
 
 ## 5. 運用ジョブ手動実行
 

@@ -12,16 +12,18 @@ title: "Prerequisites"
 
 - `git`
 - `rg` (ripgrep)
+- `jq`
 - `node` と `pnpm` (OpenClaw連携作業用)
+- `gog` (gogcli)
 - Pixel 6a + Termux
 - Google Sheets API を使える Google アカウント
-- Slack Incoming Webhook または Bot Token
+- OpenClaw 側で通知チャネルを設定できる環境
 
 ## Accounts and Secrets
 
 - Google credentials JSON
 - Sheets ID
-- Slack webhook URL または token
+- OpenClaw側の通知チャネル認証情報（このリポジトリには保存しない）
 
 秘密情報は `.env` やOSのsecret storeで管理し、リポジトリへコミットしない。
 
@@ -30,7 +32,8 @@ title: "Prerequisites"
 ```bash
 git --version
 rg --version
+jq --version
 node --version
 pnpm --version
+gog --version
 ```
-

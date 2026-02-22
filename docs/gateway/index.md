@@ -8,3 +8,5 @@ title: "Gateway"
 # Gateway
 
 このセクションは、cron連携・実行環境・接続設定の運用ドキュメントを配置する。
+
+- [OpenClaw Notification Contract](/gateway/openclaw-notification-contract)

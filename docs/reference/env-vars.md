@@ -31,23 +31,21 @@ title: "Environment Variables"
 ## Google Sheets
 
 - `GOOGLE_APPLICATION_CREDENTIALS`
+- `P6AM_GOG_BIN` (default: `gog`)
 - `P6AM_SHEETS_ID`
 - `P6AM_SHEETS_TAB`
-- `P6AM_SHEETS_APPEND_URL` (Sheets append endpoint)
+- `P6AM_SHEETS_RANGE` (例: `raw!A:F`)
+- `P6AM_SHEETS_INSERT_MODE` (default: `INSERT_ROWS`)
 - `P6AM_SHEETS_DEDUPE_DB` (例: `data/sheets-dedupe.keys`)
 - `P6AM_SHEETS_RETRY_QUEUE` (例: `tmp/sheets-retry.jsonl`)
-
-## Slack
-
-- `P6AM_SLACK_WEBHOOK_URL` または `P6AM_SLACK_BOT_TOKEN`
-- `P6AM_SLACK_CHANNEL`
-- `P6AM_NOTIFY_STATE_DB` (例: `data/slack-notified.keys`)
-- `P6AM_NOTIFY_RETRY_QUEUE` (例: `tmp/slack-retry.jsonl`)
 
 ## OpenClaw/Cron
 
 - `OPENCLAW_GATEWAY_URL`
 - `OPENCLAW_GATEWAY_TOKEN`
+- `P6AM_TAILNET_CHECK_CMD` (例: `openclaw/tailnet_precheck.sh`)
+- `P6AM_JUDGE_CMD` (例: `openclaw/activity_judge.sh`)
+- `P6AM_NOTIFY_CMD` (未設定時はOpenClaw側で通知運用する)
 
 ## Notes
 

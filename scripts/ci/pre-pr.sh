@@ -25,9 +25,6 @@ echo "Running sheets append test"
 echo "Running activity judge test"
 ./scripts/ci/test-activity-judge.sh
 
-echo "Running slack notify test"
-./scripts/ci/test-slack-notify.sh
-
 echo "Running ops runtime test"
 ./scripts/ci/test-ops-runtime.sh
 
