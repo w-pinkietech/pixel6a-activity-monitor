@@ -33,6 +33,7 @@ title: "Cron Jobs"
 ```bash
 P6AM_TERMUX_SSH_HOST=pixel6a \
 P6AM_TERMUX_SSH_USER=u0_a569 \
+P6AM_TERMUX_TAILNET_TARGET=google-pixel-6a \
 P6AM_LOCATION_REQUEST=last \
 ./openclaw/ssh_collect_job.sh
 
@@ -43,7 +44,7 @@ P6AM_LOCATION_REQUEST=last \
 ## crontab Example
 
 ```cron
-* * * * * cd /path/to/pixel6a-activity-monitor && P6AM_TERMUX_SSH_HOST=pixel6a P6AM_TERMUX_SSH_USER=u0_a569 P6AM_LOCATION_REQUEST=last ./openclaw/ssh_collect_job.sh >> tmp/logs/cron-ssh-collector.log 2>&1
+* * * * * cd /path/to/pixel6a-activity-monitor && P6AM_TERMUX_SSH_HOST=termux P6AM_TERMUX_SSH_USER=u0_a569 P6AM_TERMUX_TAILNET_TARGET=google-pixel-6a P6AM_LOCATION_REQUEST=last ./openclaw/ssh_collect_job.sh >> tmp/logs/cron-ssh-collector.log 2>&1
 0 * * * * cd /path/to/pixel6a-activity-monitor && P6AM_TAILNET_TARGET=pixel6a ./openclaw/judge_notify_job.sh >> tmp/logs/cron-judge-notify.log 2>&1
 15 0 * * * cd /path/to/pixel6a-activity-monitor && ./openclaw/log_rotate.sh >> tmp/logs/cron-log-rotate.log 2>&1
 ```

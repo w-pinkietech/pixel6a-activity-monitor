@@ -18,7 +18,8 @@ termux_port="${P6AM_TERMUX_SSH_PORT:-8022}"
 ssh_connect_timeout_sec="${P6AM_SSH_CONNECT_TIMEOUT_SEC:-10}"
 collect_timeout_sec="${P6AM_COLLECT_TIMEOUT_SEC:-45}"
 location_request="${P6AM_LOCATION_REQUEST:-last}"
-remote_collector_cmd="${P6AM_TERMUX_COLLECTOR_CMD:-~/pixel6a-activity-monitor/termux/collect_location.sh}"
+remote_collector_cmd="${P6AM_TERMUX_COLLECTOR_CMD:-cd ~/pixel6a-activity-monitor && ./termux/collect_location.sh}"
+tailnet_target="${P6AM_TERMUX_TAILNET_TARGET:-${P6AM_TAILNET_TARGET:-}}"
 
 mkdir -p "$log_dir" "$lock_dir"
 log_file="${log_dir}/${job_name}-$(date -u +%Y%m%d).log"
@@ -103,9 +104,10 @@ if ! command -v "$timeout_bin" >/dev/null 2>&1; then
   exit 1
 fi
 
-if [ -z "${P6AM_TAILNET_TARGET:-}" ]; then
-  export P6AM_TAILNET_TARGET="$termux_host"
+if [ -z "$tailnet_target" ]; then
+  tailnet_target="$termux_host"
 fi
+export P6AM_TAILNET_TARGET="$tailnet_target"
 
 if ! run_with_capture "tailnet_precheck" "$tailnet_check_cmd"; then
   write_log "warn" "tailnet_precheck" "failed" "tailnet_unreachable" 0 "false" "${last_failed_step:-tailnet_precheck}" "${last_error_detail}"
@@ -117,7 +119,7 @@ ssh_target="$termux_host"
 if [ -n "$termux_user" ]; then
   ssh_target="${termux_user}@${termux_host}"
 fi
-remote_cmd="P6AM_LOCATION_REQUEST=${location_request} ${remote_collector_cmd}"
+remote_cmd="export P6AM_LOCATION_REQUEST=${location_request}; ${remote_collector_cmd}"
 
 attempt=1
 last_run_error_code="none"
