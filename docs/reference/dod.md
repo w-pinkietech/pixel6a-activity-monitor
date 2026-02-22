@@ -21,7 +21,7 @@ title: "Definition of Done"
 - 実装範囲が Issue の `In Scope` に収まっている
 - 検証コマンドと結果が PR本文に記録されている
 - リスクとロールバック案が PR本文に記録されている
-- `scripts/ci/pre-pr.sh` が成功している
+- `scripts/ci/pre-pr.sh` が成功している（`act` スキップ時は理由を `pre-pr-report` に残している）
 - `scripts/ci/pre-pr-report.sh` の結果が PR本文に反映されている
 
 ## Code Change Done Criteria

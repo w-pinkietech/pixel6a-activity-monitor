@@ -16,6 +16,9 @@ event="$(sed -n 's/^event=//p' "$status_file" | tail -n 1)"
 job="$(sed -n 's/^job=//p' "$status_file" | tail -n 1)"
 ran_at="$(sed -n 's/^ran_at=//p' "$status_file" | tail -n 1)"
 exit_code="$(sed -n 's/^exit_code=//p' "$status_file" | tail -n 1)"
+act_result="$(sed -n 's/^act_result=//p' "$status_file" | tail -n 1)"
+act_reason="$(sed -n 's/^act_reason=//p' "$status_file" | tail -n 1)"
+act_mode="$(sed -n 's/^act_mode=//p' "$status_file" | tail -n 1)"
 
 if [ -f "$log_file" ]; then
   log_tail="$(tail -n "$tail_lines" "$log_file")"
@@ -30,6 +33,9 @@ cat > "$report_file" <<EOF
 - Result: ${result:-UNKNOWN}
 - Exit Code: ${exit_code:-0}
 - Ran At: ${ran_at:-unknown}
+- Act Mode: ${act_mode:-unknown}
+- Act Result: ${act_result:-UNKNOWN}
+- Act Reason: ${act_reason:-none}
 
 <details>
 <summary>act output tail (${tail_lines} lines)</summary>
