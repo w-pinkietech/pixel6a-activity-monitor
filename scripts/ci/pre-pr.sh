@@ -49,6 +49,9 @@ echo "Running termux collector test"
 echo "Running termux smoke test"
 ./scripts/ci/test-termux-smoke.sh
 
+echo "Running ssh collector job test"
+./scripts/ci/test-ssh-collector-job.sh
+
 echo "Running sheets append test"
 ./scripts/ci/test-sheets-append.sh
 

@@ -50,6 +50,14 @@ title: "Environment Variables"
 - `P6AM_TAILNET_CHECK_CMD` (例: `openclaw/tailnet_precheck.sh`)
 - `P6AM_JUDGE_CMD` (例: `openclaw/activity_judge.sh`)
 - `P6AM_NOTIFY_CMD` (未設定時はOpenClaw側で通知運用する)
+- `P6AM_TERMUX_SSH_HOST` (例: `pixel6a` または `100.76.x.x`)
+- `P6AM_TERMUX_SSH_USER` (例: `u0_a569`)
+- `P6AM_TERMUX_SSH_PORT` (default: `8022`)
+- `P6AM_TERMUX_COLLECTOR_CMD` (default: `~/pixel6a-activity-monitor/termux/collect_location.sh`)
+- `P6AM_SSH_BIN` (default: `ssh`)
+- `P6AM_TIMEOUT_BIN` (default: `timeout`)
+- `P6AM_SSH_CONNECT_TIMEOUT_SEC` (default: `10`)
+- `P6AM_COLLECT_TIMEOUT_SEC` (default: `45`)
 
 ## Notes
 

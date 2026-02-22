@@ -46,8 +46,9 @@ Pixel 6a (Termux) の位置情報収集、Google Sheets保存、活動判定、O
 ## Current Status (2026-02-22)
 
 - Core MVP（Issue #1-#5）はローカル実装・テスト済み。
-- 実機収集の安定化（Issue #15）を進行中。
-- 次は 1分間隔のSSH collector自動実行（Issue #16）でMVP要件を完了させる。
+- 実機収集の安定化（Issue #15）は実機確認まで完了。
+- 1分間隔のSSH collector自動実行（Issue #16）は実装・テスト済み。
+- 残タスクは 30-60分連続運転の実地検証。
 
 詳細な実行順序とIssue分割は
 [Pixel6a Activity Monitor MVP Execution Plan](/experiments/plans/pixel6a-activity-monitor-mvp-execution)

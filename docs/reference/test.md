@@ -12,6 +12,7 @@ title: "Tests"
 - docsチェック: `./scripts/ci/docs-check.sh`
 - Termux収集テスト: `./scripts/ci/test-termux-collector.sh`
 - Termux収集スモークテスト: `./scripts/ci/test-termux-smoke.sh`
+- SSH collectorジョブテスト: `./scripts/ci/test-ssh-collector-job.sh`
 - Sheets追記テスト: `./scripts/ci/test-sheets-append.sh`
 - 活動判定テスト: `./scripts/ci/test-activity-judge.sh`
 - 運用ランタイムテスト: `./scripts/ci/test-ops-runtime.sh`
