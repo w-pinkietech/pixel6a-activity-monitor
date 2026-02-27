@@ -7,18 +7,27 @@ title: "Google Sheets"
 
 # Google Sheets
 
+Page type: reference
+
 ## Scope
 
 位置情報イベントを追記形式で保存する。
 
 ## Row Schema
 
-Sheets へは次の6列を保存する（`termux/collect_location.sh` の追加フィールドはローカルJSONLで保持し、MVPではSheetsには送らない）。
+Sheets へは次の13列を保存する。
 
 - `timestamp_utc` (ISO8601)
+- `timestamp_jst` (ISO8601, `P6AM_TZ` に従う。default: `Asia/Tokyo`)
 - `lat`
 - `lng`
+- `altitude_m`
 - `accuracy_m`
+- `vertical_accuracy_m`
+- `bearing_deg`
+- `speed_mps`
+- `elapsed_ms`
+- `provider`
 - `source` (`termux`)
 - `device_id`
 
@@ -34,16 +43,31 @@ Sheets へは次の6列を保存する（`termux/collect_location.sh` の追加�
 
 - 入力: `P6AM_DATA_PATH` のJSONL
 - 実行: `gog sheets append`
-- 範囲: `P6AM_SHEETS_RANGE`（未指定時は `P6AM_SHEETS_TAB` から `tab!A:F` を自動生成）
+- 範囲: `P6AM_SHEETS_RANGE`（未指定時は `P6AM_SHEETS_TAB` から `tab!A:M` を自動生成）
 - 重複管理: `P6AM_SHEETS_DEDUPE_DB`
 - 失敗キュー: `P6AM_SHEETS_RETRY_QUEUE`
 
 ```bash
 P6AM_GOG_BIN=gog \
 P6AM_SHEETS_ID=sheet-id \
-P6AM_SHEETS_RANGE='raw!A:F' \
+P6AM_SHEETS_RANGE='raw!A:M' \
 ./openclaw/sheets_append.sh
 ```
+
+収集と追記を連続実行する場合:
+
+```bash
+P6AM_TERMUX_SSH_HOST=termux \
+P6AM_TERMUX_SSH_USER=u0_a569 \
+P6AM_TERMUX_TAILNET_TARGET=google-pixel-6a \
+P6AM_SHEETS_ID=sheet-id \
+P6AM_SHEETS_RANGE='raw!A:M' \
+P6AM_LOCATION_REQUEST=last \
+./openclaw/collect_sheets_job.sh
+```
+
+補足:
+- `openclaw/ssh_collect_job.sh` は Termux 側で収集後、最新1行をローカル `data/location.jsonl` に同期してから Sheets 追記へ渡す（`P6AM_SYNC_LOCAL_DATA=1` が既定）。
 
 ## Validation
 

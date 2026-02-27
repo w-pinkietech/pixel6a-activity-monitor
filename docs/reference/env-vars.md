@@ -8,6 +8,8 @@ title: "Environment Variables"
 
 # Environment Variables
 
+Page type: reference
+
 ## Naming Rules
 
 - プロジェクト固有は `P6AM_` プレフィックスを使う。
@@ -38,7 +40,7 @@ title: "Environment Variables"
 - `P6AM_GOG_BIN` (default: `gog`)
 - `P6AM_SHEETS_ID`
 - `P6AM_SHEETS_TAB`
-- `P6AM_SHEETS_RANGE` (例: `raw!A:F`)
+- `P6AM_SHEETS_RANGE` (例: `raw!A:M`)
 - `P6AM_SHEETS_INSERT_MODE` (default: `INSERT_ROWS`)
 - `P6AM_SHEETS_DEDUPE_DB` (例: `data/sheets-dedupe.keys`)
 - `P6AM_SHEETS_RETRY_QUEUE` (例: `tmp/sheets-retry.jsonl`)
@@ -59,6 +61,12 @@ title: "Environment Variables"
 - `P6AM_TIMEOUT_BIN` (default: `timeout`)
 - `P6AM_SSH_CONNECT_TIMEOUT_SEC` (default: `10`)
 - `P6AM_COLLECT_TIMEOUT_SEC` (default: `45`)
+- `P6AM_SYNC_LOCAL_DATA` (default: `1`, `ssh_collect_job.sh` 実行後に Termux 最新1行をローカルへ同期)
+- `P6AM_LOCAL_DATA_PATH` (default: `data/location.jsonl`, 同期先のローカルJSONL)
+- `P6AM_TERMUX_DATA_PATH` (default: `~/pixel6a-activity-monitor/data/location.jsonl`, 同期元のTermux JSONL)
+- `P6AM_SYNC_TIMEOUT_SEC` (default: `15`)
+- `P6AM_COLLECT_CMD` (default: `openclaw/ssh_collect_job.sh`, `collect_sheets_job.sh` から呼ぶ収集ジョブ)
+- `P6AM_SHEETS_APPEND_CMD` (default: `openclaw/sheets_append.sh`, `collect_sheets_job.sh` から呼ぶ追記ジョブ)
 
 ## Notes
 

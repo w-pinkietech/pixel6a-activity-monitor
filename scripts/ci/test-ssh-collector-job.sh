@@ -49,6 +49,7 @@ cat > "${mock_bin}/ssh" <<'EOF'
 set -euo pipefail
 log_file="${MOCK_SSH_LOG_FILE:?}"
 count_file="${MOCK_SSH_COUNT_FILE:?}"
+sync_record="${MOCK_SYNC_RECORD:?}"
 count=0
 if [ -f "${count_file}" ]; then
   count="$(cat "${count_file}")"
@@ -66,6 +67,12 @@ if [ "${MOCK_SSH_FAIL_ONCE:-0}" = "1" ] && [ "${count}" -eq 1 ]; then
   exit 255
 fi
 
+remote_cmd="${!#}"
+if [[ "${remote_cmd}" == *"tail -n 1"* ]]; then
+  printf '%s\n' "${sync_record}"
+  exit 0
+fi
+
 echo "remote collector ok"
 EOF
 chmod +x "${mock_bin}/ssh"
@@ -74,6 +81,8 @@ log_dir="${tmp_dir}/logs"
 lock_dir="${tmp_dir}/locks"
 ssh_args_log="${tmp_dir}/ssh-args.log"
 ssh_count_file="${tmp_dir}/ssh-count.txt"
+local_data_path="${tmp_dir}/data/location.jsonl"
+sync_record='{"timestamp_utc":"2026-02-27T00:00:00Z","lat":35.0,"lng":139.0,"altitude_m":50.0,"accuracy_m":10.0,"vertical_accuracy_m":5.0,"bearing_deg":0.0,"speed_mps":0.0,"elapsed_ms":1,"provider":"gps","source":"termux","device_id":"pixel6a"}'
 
 export PATH="${mock_bin}:${PATH}"
 export P6AM_LOG_DIR="${log_dir}"
@@ -88,8 +97,10 @@ export P6AM_SSH_BIN="ssh"
 export P6AM_TIMEOUT_BIN="timeout"
 export P6AM_JOB_MAX_RETRIES="2"
 export P6AM_JOB_RETRY_SLEEP_SEC="0"
+export P6AM_LOCAL_DATA_PATH="${local_data_path}"
 export MOCK_SSH_LOG_FILE="${ssh_args_log}"
 export MOCK_SSH_COUNT_FILE="${ssh_count_file}"
+export MOCK_SYNC_RECORD="${sync_record}"
 
 "${job_script}" >/dev/null
 today_log="${log_dir}/ssh-collector-$(date -u +%Y%m%d).log"
@@ -109,6 +120,14 @@ if ! grep -q 'P6AM_LOCATION_REQUEST=last' "${ssh_args_log}"; then
   echo "ssh command should include P6AM_LOCATION_REQUEST=last" >&2
   exit 1
 fi
+if [ ! -f "${local_data_path}" ]; then
+  echo "local sync file was not created" >&2
+  exit 1
+fi
+if [ "$(wc -l < "${local_data_path}")" -ne 1 ]; then
+  echo "local sync file should contain one record after first success" >&2
+  exit 1
+fi
 
 rm -f "${ssh_count_file}"
 export MOCK_SSH_FAIL_ONCE="1"
@@ -124,6 +143,10 @@ if ! grep -q '"failed_step":"collect"' "${today_log}"; then
 fi
 if ! grep -q 'mock ssh failed once' "${today_log}"; then
   echo "retry log should include ssh failure detail" >&2
+  exit 1
+fi
+if [ "$(wc -l < "${local_data_path}")" -ne 1 ]; then
+  echo "local sync should avoid duplicate records" >&2
   exit 1
 fi
 

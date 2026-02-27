@@ -55,6 +55,9 @@ echo "Running ssh collector job test"
 echo "Running sheets append test"
 ./scripts/ci/test-sheets-append.sh
 
+echo "Running collect sheets job test"
+./scripts/ci/test-collect-sheets-job.sh
+
 echo "Running activity judge test"
 ./scripts/ci/test-activity-judge.sh
 

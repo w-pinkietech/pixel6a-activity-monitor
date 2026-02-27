@@ -7,6 +7,8 @@ title: "Tests"
 
 # Tests
 
+Page type: reference
+
 詳細ガイドは [Testing](/help/testing) を参照。
 
 - docsチェック: `./scripts/ci/docs-check.sh`
@@ -14,6 +16,7 @@ title: "Tests"
 - Termux収集スモークテスト: `./scripts/ci/test-termux-smoke.sh`
 - SSH collectorジョブテスト: `./scripts/ci/test-ssh-collector-job.sh`
 - Sheets追記テスト: `./scripts/ci/test-sheets-append.sh`
+- collect + Sheetsジョブテスト: `./scripts/ci/test-collect-sheets-job.sh`
 - 活動判定テスト: `./scripts/ci/test-activity-judge.sh`
 - 運用ランタイムテスト: `./scripts/ci/test-ops-runtime.sh`
 - PR前ゲート: `./scripts/ci/pre-pr.sh`

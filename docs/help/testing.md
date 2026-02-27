@@ -8,6 +8,8 @@ title: "Testing"
 
 # Testing
 
+Page type: how-to
+
 このリポジトリは現在 docs-first で進めているため、まずはドキュメントとCI再現をテストの基準とする。
 
 ## Quick Start
@@ -20,6 +22,7 @@ PR前の基本ゲート:
 ./scripts/ci/test-termux-smoke.sh
 ./scripts/ci/test-ssh-collector-job.sh
 ./scripts/ci/test-sheets-append.sh
+./scripts/ci/test-collect-sheets-job.sh
 ./scripts/ci/test-activity-judge.sh
 ./scripts/ci/test-ops-runtime.sh
 ./scripts/ci/pre-pr.sh
@@ -30,6 +33,7 @@ PR前の基本ゲート:
 - `test-termux-smoke.sh`: 実機向け収集スモークスクリプトの複数回収集をモックで検証
 - `test-ssh-collector-job.sh`: OpenClaw側 SSH collector job の lock/timeout/retry/Tailnetチェックをモックで検証
 - `test-sheets-append.sh`: Sheets追記スクリプトのdedupe/retryをモックで検証
+- `test-collect-sheets-job.sh`: OpenClaw側 collect->Sheets job の lock/retry/failed_step ログをモックで検証
 - `test-activity-judge.sh`: 1時間窓の距離判定と再実行安定性を検証
 - `test-ops-runtime.sh`: Tailnet事前確認、judge/notifyステップ失敗時の詳細ログ、retry、ログローテーションをモックで検証
 - `pre-pr.sh`: `act` でGitHub Actions相当のローカル実行（Docker不可環境では理由付きスキップ）

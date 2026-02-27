@@ -8,6 +8,8 @@ title: "CLI Runbook"
 
 # CLI Runbook
 
+Page type: how-to
+
 ## 1. 現状確認
 
 ```bash
@@ -21,11 +23,18 @@ rg --files docs | wc -l
 OpenClaw側から SSH collector を1回実行し、Termux側 `data/location.jsonl` が増えることを確認する。
 
 ```bash
-P6AM_TERMUX_SSH_HOST=pixel6a \
+P6AM_TERMUX_SSH_HOST=termux \
 P6AM_TERMUX_SSH_USER=u0_a569 \
 P6AM_TERMUX_TAILNET_TARGET=google-pixel-6a \
 P6AM_LOCATION_REQUEST=last \
 ./openclaw/ssh_collect_job.sh
+```
+
+`Host key verification failed` が出る場合は、使用する SSH host 名（例: `termux`）で一度だけ鍵登録を行う。
+
+```bash
+ssh-keygen -R termux
+ssh -p 8022 u0_a569@termux true
 ```
 
 ## 3. Sheets連携手動実行
@@ -33,7 +42,7 @@ P6AM_LOCATION_REQUEST=last \
 ```bash
 P6AM_GOG_BIN=gog \
 P6AM_SHEETS_ID=sheet-id \
-P6AM_SHEETS_RANGE='raw!A:F' \
+P6AM_SHEETS_RANGE='raw!A:M' \
 ./openclaw/sheets_append.sh
 ```
 
@@ -48,9 +57,9 @@ P6AM_JUDGE_NOW_UTC="$(date -u +%Y-%m-%dT%H:%M:%SZ)" ./openclaw/activity_judge.sh
 ## 5. 運用ジョブ手動実行
 
 ```bash
-P6AM_TAILNET_TARGET=pixel6a ./openclaw/tailnet_precheck.sh
-P6AM_TERMUX_SSH_HOST=termux P6AM_TERMUX_SSH_USER=u0_a569 P6AM_TERMUX_TAILNET_TARGET=google-pixel-6a P6AM_LOCATION_REQUEST=last ./openclaw/ssh_collect_job.sh
-P6AM_TAILNET_TARGET=pixel6a ./openclaw/judge_notify_job.sh
+P6AM_TAILNET_TARGET=google-pixel-6a ./openclaw/tailnet_precheck.sh
+P6AM_TERMUX_SSH_HOST=termux P6AM_TERMUX_SSH_USER=u0_a569 P6AM_TERMUX_TAILNET_TARGET=google-pixel-6a P6AM_SHEETS_ID=sheet-id P6AM_SHEETS_RANGE='raw!A:M' P6AM_LOCATION_REQUEST=last ./openclaw/collect_sheets_job.sh
+P6AM_TAILNET_TARGET=google-pixel-6a ./openclaw/judge_notify_job.sh
 ./openclaw/log_rotate.sh
 ```
 
