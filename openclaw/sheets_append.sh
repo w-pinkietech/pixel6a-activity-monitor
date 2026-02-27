@@ -6,6 +6,7 @@ sheets_id="${P6AM_SHEETS_ID:-}"
 sheets_tab="${P6AM_SHEETS_TAB:-}"
 sheets_range="${P6AM_SHEETS_RANGE:-}"
 gog_bin="${P6AM_GOG_BIN:-gog}"
+output_tz="${P6AM_TZ:-Asia/Tokyo}"
 insert_mode="${P6AM_SHEETS_INSERT_MODE:-INSERT_ROWS}"
 dedupe_db="${P6AM_SHEETS_DEDUPE_DB:-data/sheets-dedupe.keys}"
 retry_queue="${P6AM_SHEETS_RETRY_QUEUE:-tmp/sheets-retry.jsonl}"
@@ -16,7 +17,7 @@ if [ -z "${sheets_id}" ]; then
 fi
 
 if [ -z "${sheets_range}" ] && [ -n "${sheets_tab}" ]; then
-  sheets_range="${sheets_tab}!A:F"
+  sheets_range="${sheets_tab}!A:M"
 fi
 if [ -z "${sheets_range}" ]; then
   echo "P6AM_SHEETS_RANGE or P6AM_SHEETS_TAB is required" >&2
@@ -68,16 +69,45 @@ key_exists() {
   [ -f "$dedupe_db" ] && grep -Fxq "$key" "$dedupe_db"
 }
 
+format_timestamp_in_tz() {
+  local timestamp_utc="$1"
+  local tz_name="$2"
+  if [ -z "$timestamp_utc" ]; then
+    printf ''
+    return
+  fi
+  if converted="$(TZ="$tz_name" date -d "$timestamp_utc" '+%Y-%m-%dT%H:%M:%S%:z' 2>/dev/null)"; then
+    printf '%s' "$converted"
+    return
+  fi
+  if [ "$tz_name" = "Asia/Tokyo" ]; then
+    printf '%s' "$timestamp_utc" | jq -r 'try (fromdateiso8601 + 32400 | strftime("%Y-%m-%dT%H:%M:%S+09:00")) catch ""'
+    return
+  fi
+  printf ''
+}
+
 send_record() {
   local line="$1"
+  local timestamp_utc
+  local timestamp_local
   local values_json
+  timestamp_utc="$(extract_string_field "$line" "timestamp_utc")"
+  timestamp_local="$(format_timestamp_in_tz "$timestamp_utc" "$output_tz")"
   values_json="$(
-    printf '%s' "$line" | jq -c '[
+    printf '%s' "$line" | jq -c --arg timestamp_jst "$timestamp_local" '[
       [
         (.timestamp_utc // ""),
+        $timestamp_jst,
         (if .lat == null then "" else (.lat | tostring) end),
         (if .lng == null then "" else (.lng | tostring) end),
+        (if .altitude_m == null then "" else (.altitude_m | tostring) end),
         (if .accuracy_m == null then "" else (.accuracy_m | tostring) end),
+        (if .vertical_accuracy_m == null then "" else (.vertical_accuracy_m | tostring) end),
+        (if .bearing_deg == null then "" else (.bearing_deg | tostring) end),
+        (if .speed_mps == null then "" else (.speed_mps | tostring) end),
+        (if .elapsed_ms == null then "" else (.elapsed_ms | tostring) end),
+        (.provider // ""),
         (.source // ""),
         (.device_id // "")
       ]

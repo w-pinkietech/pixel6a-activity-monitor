@@ -40,7 +40,7 @@ Page type: reference
 - `P6AM_GOG_BIN` (default: `gog`)
 - `P6AM_SHEETS_ID`
 - `P6AM_SHEETS_TAB`
-- `P6AM_SHEETS_RANGE` (例: `raw!A:F`)
+- `P6AM_SHEETS_RANGE` (例: `raw!A:M`)
 - `P6AM_SHEETS_INSERT_MODE` (default: `INSERT_ROWS`)
 - `P6AM_SHEETS_DEDUPE_DB` (例: `data/sheets-dedupe.keys`)
 - `P6AM_SHEETS_RETRY_QUEUE` (例: `tmp/sheets-retry.jsonl`)

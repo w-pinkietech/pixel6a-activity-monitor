@@ -65,15 +65,16 @@ EOF
 chmod +x "${mock_bin}/gog"
 
 cat > "${data_path}" <<'EOF'
-{"timestamp_utc":"2026-02-21T00:00:00Z","lat":35.0,"lng":139.0,"accuracy_m":10.0,"source":"termux","device_id":"pixel6a"}
-{"timestamp_utc":"2026-02-21T00:01:00Z","lat":35.1,"lng":139.1,"accuracy_m":11.0,"source":"termux","device_id":"pixel6a"}
+{"timestamp_utc":"2026-02-21T00:00:00Z","lat":35.0,"lng":139.0,"altitude_m":45.2,"accuracy_m":10.0,"vertical_accuracy_m":12.3,"bearing_deg":180.5,"speed_mps":0.8,"elapsed_ms":2450,"provider":"gps","source":"termux","device_id":"pixel6a"}
+{"timestamp_utc":"2026-02-21T00:01:00Z","lat":35.1,"lng":139.1,"altitude_m":46.0,"accuracy_m":11.0,"vertical_accuracy_m":13.0,"bearing_deg":181.0,"speed_mps":0.9,"elapsed_ms":2460,"provider":"gps","source":"termux","device_id":"pixel6a"}
 EOF
 
 export PATH="${mock_bin}:${PATH}"
 export P6AM_GOG_BIN="gog"
 export P6AM_SHEETS_ID="sheet-id"
 export P6AM_SHEETS_TAB="raw"
-export P6AM_SHEETS_RANGE="raw!A:F"
+export P6AM_SHEETS_RANGE="raw!A:M"
+export P6AM_TZ="Asia/Tokyo"
 export P6AM_SHEETS_INSERT_MODE="INSERT_ROWS"
 export P6AM_DATA_PATH="${data_path}"
 export P6AM_SHEETS_DEDUPE_DB="${dedupe_path}"
@@ -95,6 +96,25 @@ if [ "$(cat "${MOCK_GOG_COUNT_FILE}")" -ne 2 ]; then
   echo "expected 2 gog calls after first run" >&2
   exit 1
 fi
+first_call="$(head -n 1 "${MOCK_GOG_CALLS_FILE}")"
+first_range="$(printf '%s' "${first_call}" | cut -f2)"
+if [ "${first_range}" != "raw!A:M" ]; then
+  echo "expected range raw!A:M" >&2
+  exit 1
+fi
+first_values_json="$(printf '%s' "${first_call}" | cut -f4-)"
+if [ "$(printf '%s' "${first_values_json}" | jq '.[0] | length')" -ne 13 ]; then
+  echo "expected 13 columns in values_json" >&2
+  exit 1
+fi
+if ! printf '%s' "${first_values_json}" | jq -e '.[0][1] | test("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\+09:00$")' >/dev/null; then
+  echo "expected JST timestamp column in values_json" >&2
+  exit 1
+fi
+if ! printf '%s' "${first_values_json}" | jq -e '.[0][10] == "gps" and .[0][11] == "termux" and .[0][12] == "pixel6a"' >/dev/null; then
+  echo "expected provider/source/device_id columns in values_json" >&2
+  exit 1
+fi
 if [ -f "${retry_path}" ]; then
   echo "retry queue should be empty after successful run" >&2
   exit 1
@@ -107,7 +127,7 @@ if [ "$(cat "${MOCK_GOG_COUNT_FILE}")" -ne 2 ]; then
 fi
 
 cat >> "${data_path}" <<'EOF'
-{"timestamp_utc":"2026-02-21T00:02:00Z","lat":35.2,"lng":139.2,"accuracy_m":12.0,"source":"termux","device_id":"pixel6a"}
+{"timestamp_utc":"2026-02-21T00:02:00Z","lat":35.2,"lng":139.2,"altitude_m":47.0,"accuracy_m":12.0,"vertical_accuracy_m":13.5,"bearing_deg":181.2,"speed_mps":1.0,"elapsed_ms":2470,"provider":"gps","source":"termux","device_id":"pixel6a"}
 EOF
 
 export MOCK_GOG_FAIL_PATTERN='2026-02-21T00:02:00Z'
