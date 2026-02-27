@@ -2,7 +2,7 @@
 summary: "Pixel6a Activity Monitor MVP の実装順序・Issue分割・検証基準を定義する実行Plan"
 owner: "wataken"
 status: "in-progress"
-last_updated: "2026-02-22"
+last_updated: "2026-02-27"
 read_when:
   - MVPをIssue分割して着手するとき
   - 実装順序と受け入れ条件を確認したいとき
@@ -225,5 +225,5 @@ MVPの大枠Planは存在するが、実装に入るための Issue 粒度と受
   - #4 実装・テスト済み
   - #5 実装・テスト済み
   - #15 実装・テスト済み（実機収集確認済み）
-  - #16 実装・テスト済み（cron登録手順・runbook追記済み、30-60分連続運転は未実施）
+  - #16 実装・テスト済み（cron登録手順・runbook追記済み、30分連続運転で 29/30 成功・1回の tailnet 一時失敗後の自動復帰を確認）
 - 実装開始条件: Issueと受け入れ条件の合意完了（Issue 01 から着手）。
