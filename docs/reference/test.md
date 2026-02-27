@@ -11,9 +11,10 @@ title: "Tests"
 
 - docsチェック: `./scripts/ci/docs-check.sh`
 - Termux収集テスト: `./scripts/ci/test-termux-collector.sh`
+- Termux収集スモークテスト: `./scripts/ci/test-termux-smoke.sh`
+- SSH collectorジョブテスト: `./scripts/ci/test-ssh-collector-job.sh`
 - Sheets追記テスト: `./scripts/ci/test-sheets-append.sh`
 - 活動判定テスト: `./scripts/ci/test-activity-judge.sh`
-- Slack通知テスト: `./scripts/ci/test-slack-notify.sh`
 - 運用ランタイムテスト: `./scripts/ci/test-ops-runtime.sh`
 - PR前ゲート: `./scripts/ci/pre-pr.sh`
 - PR運用ゲート: `scripts/pr-review`, `scripts/pr-prepare`, `scripts/pr-merge`

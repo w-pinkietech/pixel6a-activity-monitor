@@ -33,7 +33,7 @@ title: "Plan"
 
 ### Phase 4: Notification
 
-7. Slackへ定期通知
+7. OpenClaw側で人間向け通知を配信
 8. 失敗時リトライと障害ログ記録
 
 ## Next

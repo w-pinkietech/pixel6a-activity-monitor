@@ -42,7 +42,7 @@
     },
     {
       "group": "Gateway",
-      "pages": ["gateway/index"]
+      "pages": ["gateway/index", "gateway/openclaw-notification-contract"]
     },
     {
       "group": "Web",

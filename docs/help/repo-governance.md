@@ -23,7 +23,7 @@ title: "Repository Governance"
 
 - `.github/pull_request_template.md` を埋める
 - Issue と Plan のリンクを必須にする
-- `scripts/ci/pre-pr.sh` を通してからPR作成する
+- `scripts/ci/pre-pr.sh` を通してからPR作成する（`act` スキップ時は理由を明記）
 - `scripts/ci/pre-pr-report.sh` の内容をPR本文に貼る
 - `scripts/pr-merge verify <PR>` の required checks 厳密判定を通す（0件や非passは不可）
 

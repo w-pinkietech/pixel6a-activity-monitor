@@ -18,6 +18,10 @@ title: "Environment Variables"
 - `P6AM_DEVICE_ID` (例: `pixel6a`)
 - `P6AM_TZ` (例: `Asia/Tokyo`)
 - `P6AM_DATA_PATH` (例: `data/location.jsonl`)
+- `P6AM_LOCATION_PROVIDER` (default: `gps`)
+- `P6AM_LOCATION_REQUEST` (default: `once`, `once|last|updates`)
+- `P6AM_SMOKE_SAMPLE_COUNT` (default: `3`)
+- `P6AM_SMOKE_INTERVAL_SEC` (default: `10`)
 - `P6AM_LOG_LEVEL` (`debug|info|warn|error`)
 - `P6AM_LOG_DIR` (例: `tmp/logs` または `data/logs`)
 - `P6AM_LOG_RETENTION_DAYS` (例: `7`)
@@ -31,23 +35,30 @@ title: "Environment Variables"
 ## Google Sheets
 
 - `GOOGLE_APPLICATION_CREDENTIALS`
+- `P6AM_GOG_BIN` (default: `gog`)
 - `P6AM_SHEETS_ID`
 - `P6AM_SHEETS_TAB`
-- `P6AM_SHEETS_APPEND_URL` (Sheets append endpoint)
+- `P6AM_SHEETS_RANGE` (例: `raw!A:F`)
+- `P6AM_SHEETS_INSERT_MODE` (default: `INSERT_ROWS`)
 - `P6AM_SHEETS_DEDUPE_DB` (例: `data/sheets-dedupe.keys`)
 - `P6AM_SHEETS_RETRY_QUEUE` (例: `tmp/sheets-retry.jsonl`)
-
-## Slack
-
-- `P6AM_SLACK_WEBHOOK_URL` または `P6AM_SLACK_BOT_TOKEN`
-- `P6AM_SLACK_CHANNEL`
-- `P6AM_NOTIFY_STATE_DB` (例: `data/slack-notified.keys`)
-- `P6AM_NOTIFY_RETRY_QUEUE` (例: `tmp/slack-retry.jsonl`)
 
 ## OpenClaw/Cron
 
 - `OPENCLAW_GATEWAY_URL`
 - `OPENCLAW_GATEWAY_TOKEN`
+- `P6AM_TAILNET_CHECK_CMD` (例: `openclaw/tailnet_precheck.sh`)
+- `P6AM_JUDGE_CMD` (例: `openclaw/activity_judge.sh`)
+- `P6AM_NOTIFY_CMD` (未設定時はOpenClaw側で通知運用する)
+- `P6AM_TERMUX_SSH_HOST` (例: `pixel6a` または `100.76.x.x`)
+- `P6AM_TERMUX_SSH_USER` (例: `u0_a569`)
+- `P6AM_TERMUX_SSH_PORT` (default: `8022`)
+- `P6AM_TERMUX_TAILNET_TARGET` (任意: SSH alias と tailnet 名が異なるときに指定)
+- `P6AM_TERMUX_COLLECTOR_CMD` (default: `cd ~/pixel6a-activity-monitor && ./termux/collect_location.sh`)
+- `P6AM_SSH_BIN` (default: `ssh`)
+- `P6AM_TIMEOUT_BIN` (default: `timeout`)
+- `P6AM_SSH_CONNECT_TIMEOUT_SEC` (default: `10`)
+- `P6AM_COLLECT_TIMEOUT_SEC` (default: `45`)
 
 ## Notes
 

@@ -51,6 +51,7 @@ fi
 count=$((count + 1))
 printf '%s' "${count}" > "${MOCK_NOTIFY_COUNT_FILE}"
 if [ "${MOCK_NOTIFY_FAIL_ONCE:-0}" = "1" ] && [ "${count}" -eq 1 ]; then
+  echo "mock notify failed on first attempt" >&2
   exit 1
 fi
 exit 0
@@ -88,6 +89,10 @@ if ! grep -q '"tailnet_ok":true' "${today_log}"; then
   echo "tailnet status log field is missing" >&2
   exit 1
 fi
+if ! grep -q '"failed_step":"none"' "${today_log}"; then
+  echo "success log should include failed_step=none" >&2
+  exit 1
+fi
 
 rm -f "${notify_count}"
 export MOCK_NOTIFY_FAIL_ONCE="1"
@@ -95,6 +100,14 @@ export MOCK_NOTIFY_FAIL_ONCE="1"
 unset MOCK_NOTIFY_FAIL_ONCE
 if ! grep -q '"result":"retrying"' "${today_log}"; then
   echo "retry log not found" >&2
+  exit 1
+fi
+if ! grep -q '"failed_step":"notify"' "${today_log}"; then
+  echo "retry log should indicate notify step failure" >&2
+  exit 1
+fi
+if ! grep -q 'mock notify failed on first attempt' "${today_log}"; then
+  echo "retry log should include failure detail" >&2
   exit 1
 fi
 
@@ -106,6 +119,14 @@ fi
 unset MOCK_TAILSCALE_PING_FAIL
 if ! grep -q '"event":"tailnet_precheck"' "${today_log}"; then
   echo "tailnet failure log not found" >&2
+  exit 1
+fi
+if ! grep -q '"failed_step":"tailnet_precheck"' "${today_log}"; then
+  echo "tailnet failure should include failed_step" >&2
+  exit 1
+fi
+if ! grep -q 'tailscale ping failed' "${today_log}"; then
+  echo "tailnet failure should include detail" >&2
   exit 1
 fi
 
@@ -120,6 +141,13 @@ if [ -f "${old_log}" ]; then
 fi
 if [ ! -f "${recent_log}" ]; then
   echo "recent log should be kept" >&2
+  exit 1
+fi
+
+unset P6AM_NOTIFY_CMD
+"${job_script}" >/dev/null
+if ! grep -q '"error_code":"notify_managed_by_openclaw"' "${today_log}"; then
+  echo "notify-managed success log not found" >&2
   exit 1
 fi
 

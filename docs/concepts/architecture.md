@@ -16,12 +16,12 @@ title: "Architecture"
 2. ローカル一時保存
 3. Google Sheets へ追記
 4. 1時間単位で活動量判定
-5. Slack 通知
+5. OpenClaw 側で人間向け通知
 
 ## Data Flow
 
 ```text
-Pixel6a/Termux -> local JSONL -> Google Sheets -> activity judge -> Slack
+Pixel6a/Termux -> local JSONL -> Google Sheets -> activity judge -> OpenClaw notify -> Human
 ```
 
 ## Design Constraints
@@ -36,11 +36,11 @@ Pixel6a/Termux -> local JSONL -> Google Sheets -> activity judge -> Slack
 - 端末側権限不足（位置情報取得失敗）
 - Google API認証エラー
 - Sheetsレート制限
-- Slack API送信失敗
+- OpenClaw通知ワークフロー失敗
 
 ## Next
 
 - [Plan](/start/plan)
 - [Pixel 6a (Termux)](/nodes/pixel6a-termux)
 - [Google Sheets](/providers/google-sheets)
-- [Slack](/channels/slack)
+- [Slack (OpenClaw Managed)](/channels/slack)

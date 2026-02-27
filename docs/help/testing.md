@@ -17,20 +17,22 @@ PR前の基本ゲート:
 ```bash
 ./scripts/ci/docs-check.sh
 ./scripts/ci/test-termux-collector.sh
+./scripts/ci/test-termux-smoke.sh
+./scripts/ci/test-ssh-collector-job.sh
 ./scripts/ci/test-sheets-append.sh
 ./scripts/ci/test-activity-judge.sh
-./scripts/ci/test-slack-notify.sh
 ./scripts/ci/test-ops-runtime.sh
 ./scripts/ci/pre-pr.sh
 ```
 
 - `docs-check.sh`: Markdown品質とリンク整合性を確認
 - `test-termux-collector.sh`: Termux収集スクリプトのJSONL出力をモックで検証
+- `test-termux-smoke.sh`: 実機向け収集スモークスクリプトの複数回収集をモックで検証
+- `test-ssh-collector-job.sh`: OpenClaw側 SSH collector job の lock/timeout/retry/Tailnetチェックをモックで検証
 - `test-sheets-append.sh`: Sheets追記スクリプトのdedupe/retryをモックで検証
 - `test-activity-judge.sh`: 1時間窓の距離判定と再実行安定性を検証
-- `test-slack-notify.sh`: Slack通知の重複抑止と再送をモックで検証
-- `test-ops-runtime.sh`: Tailnet事前確認、retry、ログローテーションをモックで検証
-- `pre-pr.sh`: `act` でGitHub Actions相当のローカル実行
+- `test-ops-runtime.sh`: Tailnet事前確認、judge/notifyステップ失敗時の詳細ログ、retry、ログローテーションをモックで検証
+- `pre-pr.sh`: `act` でGitHub Actions相当のローカル実行（Docker不可環境では理由付きスキップ）
 
 ## PR Workflow Gates
 
