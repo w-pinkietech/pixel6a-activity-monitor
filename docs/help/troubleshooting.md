@@ -24,6 +24,7 @@ git status --short
   - `missing_termux_host`: `P6AM_TERMUX_SSH_HOST` を設定する
   - `lock_busy`: 先行ジョブが残っている可能性があるため、`tmp/locks/ssh-collector.lock` の残存を確認する
   - `tailnet_unreachable`: `tailscale status` と `tailscale ping "$P6AM_TAILNET_TARGET"` を確認する
+  - `Host key verification failed`: `P6AM_TERMUX_SSH_HOST` に設定した host 名で known_hosts を更新する（例: `ssh-keygen -R termux` -> `ssh -p 8022 u0_a569@termux true`）
   - SSH alias（例: `termux`）を使う場合、`P6AM_TERMUX_TAILNET_TARGET` を実際の tailnet 名/IP に設定する
   - `max_retries_exceeded`: `P6AM_COLLECT_TIMEOUT_SEC` の延長、または `P6AM_LOCATION_REQUEST=last` の設定を確認する
 - Sheets追記が失敗する: 認証情報とAPIレスポンスを確認
