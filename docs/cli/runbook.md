@@ -58,7 +58,7 @@ P6AM_JUDGE_NOW_UTC="$(date -u +%Y-%m-%dT%H:%M:%SZ)" ./openclaw/activity_judge.sh
 
 ```bash
 P6AM_TAILNET_TARGET=google-pixel-6a ./openclaw/tailnet_precheck.sh
-P6AM_TERMUX_SSH_HOST=termux P6AM_TERMUX_SSH_USER=u0_a569 P6AM_TERMUX_TAILNET_TARGET=google-pixel-6a P6AM_LOCATION_REQUEST=last ./openclaw/ssh_collect_job.sh
+P6AM_TERMUX_SSH_HOST=termux P6AM_TERMUX_SSH_USER=u0_a569 P6AM_TERMUX_TAILNET_TARGET=google-pixel-6a P6AM_SHEETS_ID=sheet-id P6AM_SHEETS_RANGE='raw!A:F' P6AM_LOCATION_REQUEST=last ./openclaw/collect_sheets_job.sh
 P6AM_TAILNET_TARGET=google-pixel-6a ./openclaw/judge_notify_job.sh
 ./openclaw/log_rotate.sh
 ```

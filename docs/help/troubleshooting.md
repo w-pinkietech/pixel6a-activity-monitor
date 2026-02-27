@@ -7,6 +7,8 @@ title: "Troubleshooting"
 
 # Troubleshooting
 
+Page type: troubleshooting
+
 ## First 60 seconds
 
 ```bash
@@ -20,6 +22,10 @@ git status --short
 - 位置情報収集が失敗する: `termux/` の実行ログと権限を確認
   - `termux-location command not found`: Termux:API アプリ導入後、Termux で `pkg install termux-api`
   - `location payload missing latitude/longitude`: Android側の位置情報権限と GPS 有効化を確認
+- collect + Sheets ジョブが失敗する: `openclaw/collect_sheets_job.sh` のログを確認
+  - `failed_step=collect`: `openclaw/ssh_collect_job.sh` 側のエラーを確認する
+  - `failed_step=sheets_append`: `GOOGLE_APPLICATION_CREDENTIALS`, `P6AM_SHEETS_ID`, `P6AM_SHEETS_RANGE` を確認する
+  - `max_retries_exceeded`: `P6AM_JOB_MAX_RETRIES` と `P6AM_JOB_RETRY_SLEEP_SEC` を見直す
 - SSH collector が失敗する: `openclaw/ssh_collect_job.sh` のログを確認
   - `missing_termux_host`: `P6AM_TERMUX_SSH_HOST` を設定する
   - `lock_busy`: 先行ジョブが残っている可能性があるため、`tmp/locks/ssh-collector.lock` の残存を確認する

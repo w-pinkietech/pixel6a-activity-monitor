@@ -8,6 +8,8 @@ title: "Environment Variables"
 
 # Environment Variables
 
+Page type: reference
+
 ## Naming Rules
 
 - プロジェクト固有は `P6AM_` プレフィックスを使う。
@@ -59,6 +61,8 @@ title: "Environment Variables"
 - `P6AM_TIMEOUT_BIN` (default: `timeout`)
 - `P6AM_SSH_CONNECT_TIMEOUT_SEC` (default: `10`)
 - `P6AM_COLLECT_TIMEOUT_SEC` (default: `45`)
+- `P6AM_COLLECT_CMD` (default: `openclaw/ssh_collect_job.sh`, `collect_sheets_job.sh` から呼ぶ収集ジョブ)
+- `P6AM_SHEETS_APPEND_CMD` (default: `openclaw/sheets_append.sh`, `collect_sheets_job.sh` から呼ぶ追記ジョブ)
 
 ## Notes
 

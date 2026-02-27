@@ -7,6 +7,8 @@ title: "Google Sheets"
 
 # Google Sheets
 
+Page type: reference
+
 ## Scope
 
 位置情報イベントを追記形式で保存する。
@@ -43,6 +45,18 @@ P6AM_GOG_BIN=gog \
 P6AM_SHEETS_ID=sheet-id \
 P6AM_SHEETS_RANGE='raw!A:F' \
 ./openclaw/sheets_append.sh
+```
+
+収集と追記を連続実行する場合:
+
+```bash
+P6AM_TERMUX_SSH_HOST=termux \
+P6AM_TERMUX_SSH_USER=u0_a569 \
+P6AM_TERMUX_TAILNET_TARGET=google-pixel-6a \
+P6AM_SHEETS_ID=sheet-id \
+P6AM_SHEETS_RANGE='raw!A:F' \
+P6AM_LOCATION_REQUEST=last \
+./openclaw/collect_sheets_job.sh
 ```
 
 ## Validation
