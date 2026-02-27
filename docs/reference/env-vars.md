@@ -61,6 +61,10 @@ Page type: reference
 - `P6AM_TIMEOUT_BIN` (default: `timeout`)
 - `P6AM_SSH_CONNECT_TIMEOUT_SEC` (default: `10`)
 - `P6AM_COLLECT_TIMEOUT_SEC` (default: `45`)
+- `P6AM_SYNC_LOCAL_DATA` (default: `1`, `ssh_collect_job.sh` 実行後に Termux 最新1行をローカルへ同期)
+- `P6AM_LOCAL_DATA_PATH` (default: `data/location.jsonl`, 同期先のローカルJSONL)
+- `P6AM_TERMUX_DATA_PATH` (default: `~/pixel6a-activity-monitor/data/location.jsonl`, 同期元のTermux JSONL)
+- `P6AM_SYNC_TIMEOUT_SEC` (default: `15`)
 - `P6AM_COLLECT_CMD` (default: `openclaw/ssh_collect_job.sh`, `collect_sheets_job.sh` から呼ぶ収集ジョブ)
 - `P6AM_SHEETS_APPEND_CMD` (default: `openclaw/sheets_append.sh`, `collect_sheets_job.sh` から呼ぶ追記ジョブ)
 

@@ -66,6 +66,9 @@ P6AM_LOCATION_REQUEST=last \
 ./openclaw/collect_sheets_job.sh
 ```
 
+補足:
+- `openclaw/ssh_collect_job.sh` は Termux 側で収集後、最新1行をローカル `data/location.jsonl` に同期してから Sheets 追記へ渡す（`P6AM_SYNC_LOCAL_DATA=1` が既定）。
+
 ## Validation
 
 - 1回実行で1行追加される

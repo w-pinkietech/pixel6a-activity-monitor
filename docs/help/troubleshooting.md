@@ -26,6 +26,10 @@ git status --short
   - `failed_step=collect`: `openclaw/ssh_collect_job.sh` 側のエラーを確認する
   - `failed_step=sheets_append`: `GOOGLE_APPLICATION_CREDENTIALS`, `P6AM_SHEETS_ID`, `P6AM_SHEETS_RANGE` を確認する
   - `max_retries_exceeded`: `P6AM_JOB_MAX_RETRIES` と `P6AM_JOB_RETRY_SLEEP_SEC` を見直す
+- collect + Sheets ジョブは成功だが行が増えない:
+  - サーバー側 `data/location.jsonl` の最終時刻と、Termux 側 `~/pixel6a-activity-monitor/data/location.jsonl` の最終時刻を比較する
+  - `P6AM_SYNC_LOCAL_DATA=1` で Termux 最新1行のローカル同期が有効か確認する
+  - `P6AM_LOCAL_DATA_PATH` と `P6AM_DATA_PATH` が同じファイルを指しているか確認する
 - SSH collector が失敗する: `openclaw/ssh_collect_job.sh` のログを確認
   - `missing_termux_host`: `P6AM_TERMUX_SSH_HOST` を設定する
   - `lock_busy`: 先行ジョブが残っている可能性があるため、`tmp/locks/ssh-collector.lock` の残存を確認する
