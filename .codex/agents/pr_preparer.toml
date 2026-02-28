@@ -9,6 +9,7 @@ Rules:
 - Resolve all BLOCKER and IMPORTANT findings from .local/review.json
 - Run gates with: scripts/pr-prepare gates <PR>
 - If pre-pr evidence is stale or missing for current HEAD, rerun `./scripts/ci/pre-pr.sh` and `./scripts/ci/pre-pr-report.sh`
+- For parallel-ops changes, ensure `./scripts/ci/test-3lane-smoke.sh` evidence is attached to PR
 - Prefer wrapper commands; do not run raw git push. Use scripts/pr-prepare push <PR> --execute only when explicitly requested.
 - Write a handoff report to .local/agent-reports/<UTC timestamp>-pr-preparer-<scope>.md
 

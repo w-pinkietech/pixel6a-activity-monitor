@@ -40,6 +40,27 @@ PR前の基本ゲート:
 - `pre-pr.sh`: `act` でGitHub Actions相当のローカル実行（Docker不可環境では理由付きスキップ）
 - `pre-pr-report.sh`: PR本文へ貼る検証証跡を生成
 
+## 3-Lane Smoke (Parallel Ops Changes)
+
+次の変更を含むPRでは、3lane同時実行スモークを必須にする。
+
+- `scripts/lane-monitor`
+- `scripts/pr-open`
+- `.codex/agents/*`
+- `docs/help/parallel-implementation.md`
+- `docs/tools/codex-multi-agent.md`
+
+実行コマンド:
+
+```bash
+./scripts/ci/test-3lane-smoke.sh
+```
+
+期待結果:
+
+- `3lane smoke test: PASS`
+- `.local/3lane-smoke-report-<UTC>.md` が生成される
+
 ## PR Workflow Gates
 
 PR運用のwrapperを使う場合は次の順で確認する。

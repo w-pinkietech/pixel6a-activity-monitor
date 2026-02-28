@@ -21,5 +21,6 @@ Page type: reference
 - 運用ランタイムテスト: `./scripts/ci/test-ops-runtime.sh`
 - PR前ゲート: `./scripts/ci/pre-pr.sh`
 - PR前レポート: `./scripts/ci/pre-pr-report.sh`
+- 3laneスモーク（並列運用変更時）: `./scripts/ci/test-3lane-smoke.sh`
 - PR作成ゲート: `scripts/pr-open`
 - PR運用ゲート: `scripts/pr-review`, `scripts/pr-prepare`, `scripts/pr-merge`

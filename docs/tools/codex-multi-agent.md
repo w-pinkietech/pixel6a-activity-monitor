@@ -74,6 +74,17 @@ tmux attach -t codex-lanes
 
 各 lane では `implementer` に 1 Issue だけを担当させる。
 
+## 3-Lane Smoke Test
+
+並列運用ルールや lane 実行スクリプトを変更した場合は、PR前に次を実行する。
+
+```bash
+./scripts/ci/test-3lane-smoke.sh
+```
+
+成功時は `.local/3lane-smoke-report-<UTC>.md` が生成される。  
+結果要約（PASS/FAILとレポートパス）をPR本文またはコメントへ残す。
+
 ## Recommended Pattern
 
 - Plan作成: `planner` (`docs/experiments/plans/*.md`)

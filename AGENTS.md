@@ -116,6 +116,8 @@
   - `./scripts/ci/pre-pr-report.sh`
 - PR作成前ゲート:
   - `scripts/pr-open ...` が成功すること（`pre-pr` 証跡とHEAD一致を検証）
+- 並列運用関連の変更（`scripts/lane-monitor`, `scripts/pr-open`, `.codex/agents/*`, `docs/help/parallel-implementation.md`, `docs/tools/codex-multi-agent.md` など）では:
+  - `./scripts/ci/test-3lane-smoke.sh` を実行し、結果レポートをPR本文またはコメントに残す
 - 失敗時は修正して再実行し、緑になるまで次に進めない。
 - CIロジックは workflow 直書きではなく `scripts/ci/*.sh` を単一ソースとして扱う。
 - `scripts/pr-merge verify <PR>` では required checks を厳密判定する（0件または非passは失敗）。

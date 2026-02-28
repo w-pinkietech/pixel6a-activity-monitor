@@ -60,6 +60,7 @@ Page type: reference
   - `./scripts/ci/pre-pr.sh`
 - 失敗時は同一PR内で修正して再実行し、緑になるまで進めない。
 - PR作成は `scripts/pr-open` を使い、`pre-pr` 証跡とHEAD一致が確認できてから行う。
+- 並列運用ルール自体を変更したPRでは `./scripts/ci/test-3lane-smoke.sh` を必須で実行する。
 
 ## Conflict Handling
 

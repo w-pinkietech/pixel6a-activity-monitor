@@ -65,6 +65,8 @@ Issue実装を含むPRは、実行テスト完了前に作成しない。
   - `./scripts/ci/pre-pr.sh`
   - `./scripts/ci/pre-pr-report.sh`
   - `scripts/pr-open` による証跡チェック
+- 並列運用変更時の追加必須:
+  - `./scripts/ci/test-3lane-smoke.sh`
 
 ## Escalation Rules
 

@@ -24,6 +24,7 @@ title: "Definition of Done"
 - `scripts/ci/pre-pr.sh` が成功している（`act` スキップ時は理由を `pre-pr-report` に残している）
 - `scripts/ci/pre-pr-report.sh` の結果が PR本文に反映されている
 - PR作成前に `scripts/pr-open` が成功している（`pre-pr` 証跡とHEAD一致を確認）
+- 並列運用関連の変更では `scripts/ci/test-3lane-smoke.sh` が成功し、結果をPRに記録している
 
 ## Code Change Done Criteria
 
@@ -31,6 +32,11 @@ title: "Definition of Done"
 - 実行テスト完了後にPRを作成した（テスト証跡が対象コミットと一致）
 - 破壊的変更がある場合は移行手順を明記した
 - 個人情報や秘密情報を追加していない
+
+## Parallel Ops Change Done Criteria
+
+- `scripts/lane-monitor`, `scripts/pr-open`, `.codex/agents/*`, `docs/help/parallel-implementation.md`, `docs/tools/codex-multi-agent.md` の変更を含む場合は `./scripts/ci/test-3lane-smoke.sh` を実行する
+- 3laneスモークレポートのパスまたは要約結果を PR本文/コメントに残す
 
 ## Docs Change Done Criteria
 
