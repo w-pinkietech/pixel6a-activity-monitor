@@ -14,6 +14,20 @@ title: "Preflight Check"
 - 関連Planの有無を確認
 - 影響範囲のdocsを特定
 
+## Before GitHub operations (Issue/PR)
+
+- `gh auth status` が成功することを確認する。
+- token 無効時は次を実行して再認証する。
+
+```bash
+gh auth logout -h github.com -u cycling777
+gh auth login -h github.com -p ssh -w
+gh auth status
+```
+
+- `gh issue create` / `gh issue comment` / `gh pr *` などのネットワーク必須操作は、Codex 実行時に sandbox 制約で失敗する場合がある。
+- 失敗時は「ネットワーク許可ありの再実行（escalated 実行）」でやり直す。
+
 ## Before opening PR
 
 - `git diff` を確認
@@ -26,4 +40,3 @@ title: "Preflight Check"
 - [Issue, Plan, PR Flow](/help/issue-plan-pr)
 - [CLI Runbook](/cli/runbook)
 - [Environment Variables](/reference/env-vars)
-
