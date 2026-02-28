@@ -22,11 +22,13 @@ command_exists() {
 
 repo_root() {
   local script_dir
-  local common_git_dir
+  local worktree_root
   script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-  if common_git_dir=$(git -C "$script_dir" rev-parse --path-format=absolute --git-common-dir 2>/dev/null); then
-    (cd "$(dirname "$common_git_dir")" && pwd)
+  # Use the script file location to resolve the active worktree root.
+  # --git-common-dir points to the shared repository and breaks worktree context.
+  if worktree_root=$(git -C "$script_dir" rev-parse --path-format=absolute --show-toplevel 2>/dev/null); then
+    printf '%s\n' "$worktree_root"
     return
   fi
 
