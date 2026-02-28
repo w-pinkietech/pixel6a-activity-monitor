@@ -70,11 +70,27 @@ gh_mode() {
     printf 'missing'
     return
   fi
-  if gh auth status >/dev/null 2>&1; then
+
+  local status_json
+  status_json="$(gh auth status --hostname github.com --json hosts 2>&1 || true)"
+  if printf '%s' "$status_json" | grep -q '"state":"success"'; then
     printf 'ok'
     return
   fi
-  printf 'auth_err'
+
+  local detail_lc
+  detail_lc="$(printf '%s' "$status_json" | tr '[:upper:]' '[:lower:]')"
+  case "$detail_lc" in
+    *token*invalid*|*token*expired*|*bad\ credentials*|*authentication\ failed*|*failed\ to\ log\ in*|*requires\ authentication*)
+      printf 'auth_err'
+      ;;
+    *dial\ tcp*|*lookup*|*no\ such\ host*|*i/o\ timeout*|*timeout*|*timed\ out*|*could\ not\ resolve\ host*|*network\ is\ unreachable*|*connection\ refused*|*operation\ not\ permitted*|*tls\ handshake*|*temporary\ failure*)
+      printf 'net_err'
+      ;;
+    *)
+      printf 'gh_err'
+      ;;
+  esac
 }
 
 extract_issue_from_branch() {
@@ -240,7 +256,20 @@ if [ "$gh_state" = "ok" ]; then
     printf 'issue url: %s\n' "$issue_url"
   fi
 else
-  printf 'hint: gh auth status (必要なら再ログイン)\n'
+  case "$gh_state" in
+    auth_err)
+      printf 'hint: gh auth status; 必要なら gh auth login -h github.com で再認証\n'
+      ;;
+    net_err)
+      printf 'hint: network error while checking GitHub auth; 接続復旧後に gh auth status を再実行\n'
+      ;;
+    missing)
+      printf 'hint: gh command not found; GitHub CLI をインストール\n'
+      ;;
+    *)
+      printf 'hint: gh auth status で詳細を確認\n'
+      ;;
+  esac
 fi
 printf '\n'
 

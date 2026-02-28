@@ -175,11 +175,27 @@ gh_mode() {
     printf 'missing'
     return
   fi
-  if gh auth status >/dev/null 2>&1; then
+
+  local status_json
+  status_json="$(gh auth status --hostname github.com --json hosts 2>&1 || true)"
+  if printf '%s' "$status_json" | grep -q '"state":"success"'; then
     printf 'ok'
     return
   fi
-  printf 'auth_err'
+
+  local detail_lc
+  detail_lc="$(printf '%s' "$status_json" | tr '[:upper:]' '[:lower:]')"
+  case "$detail_lc" in
+    *token*invalid*|*token*expired*|*bad\ credentials*|*authentication\ failed*|*failed\ to\ log\ in*|*requires\ authentication*)
+      printf 'auth_err'
+      ;;
+    *dial\ tcp*|*lookup*|*no\ such\ host*|*i/o\ timeout*|*timeout*|*timed\ out*|*could\ not\ resolve\ host*|*network\ is\ unreachable*|*connection\ refused*|*operation\ not\ permitted*|*tls\ handshake*|*temporary\ failure*)
+      printf 'net_err'
+      ;;
+    *)
+      printf 'gh_err'
+      ;;
+  esac
 }
 
 fetch_issue_meta() {
@@ -498,8 +514,17 @@ sync_lane_pr() {
         echo "no PR found yet for lane=$lane branch=$branch"
       fi
       ;;
+    auth_err)
+      echo "skip sync-pr: gh auth invalid; re-login required"
+      ;;
+    net_err)
+      echo "skip sync-pr: network error while checking gh auth"
+      ;;
+    missing)
+      echo "skip sync-pr: gh command not found"
+      ;;
     *)
-      echo "skip sync-pr: gh unavailable or unauthorized"
+      echo "skip sync-pr: gh auth check failed"
       ;;
   esac
 }
