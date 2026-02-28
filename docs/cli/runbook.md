@@ -37,7 +37,35 @@ ssh-keygen -R termux
 ssh -p 8022 u0_a569@termux true
 ```
 
-## 3. Sheets連携手動実行
+## 3. Drive/Sheets 保存先プロビジョニング
+
+初回導入または再セットアップ時に、保存先 folder / spreadsheet / header を初期化する。
+
+```bash
+P6AM_GOG_BIN=gog \
+P6AM_GOG_ACCOUNT=you@example.com \
+P6AM_DRIVE_PARENT_ID=root-folder-id \
+P6AM_DRIVE_FOLDER_NAME=pixel6a-activity-monitor \
+P6AM_SHEETS_TITLE=pixel6a-activity-monitor-raw \
+./openclaw/provision_data_target.sh
+```
+
+結果は `tmp/provision-data-target.env` に保存される。読み込んで利用する。
+
+```bash
+set -a
+source tmp/provision-data-target.env
+set +a
+```
+
+ヘッダー確認:
+
+```bash
+gog -a you@example.com sheets get "$P6AM_SHEETS_ID" 'raw!A1:M1'
+gog -a you@example.com sheets get "$P6AM_SHEETS_ID" 'conversation_log!A1:H1'
+```
+
+## 4. Sheets連携手動実行
 
 ```bash
 P6AM_GOG_BIN=gog \
@@ -46,7 +74,7 @@ P6AM_SHEETS_RANGE='raw!A:M' \
 ./openclaw/sheets_append.sh
 ```
 
-## 4. 判定・通知手動実行
+## 5. 判定・通知手動実行
 
 ```bash
 P6AM_JUDGE_NOW_UTC="$(date -u +%Y-%m-%dT%H:%M:%SZ)" ./openclaw/activity_judge.sh
@@ -54,7 +82,7 @@ P6AM_JUDGE_NOW_UTC="$(date -u +%Y-%m-%dT%H:%M:%SZ)" ./openclaw/activity_judge.sh
 
 通知送信は OpenClaw 側で実行する。通知メッセージ仕様は `/gateway/openclaw-notification-contract` を参照。
 
-## 5. 運用ジョブ手動実行
+## 6. 運用ジョブ手動実行
 
 ```bash
 P6AM_TAILNET_TARGET=google-pixel-6a ./openclaw/tailnet_precheck.sh
@@ -63,7 +91,7 @@ P6AM_TAILNET_TARGET=google-pixel-6a ./openclaw/judge_notify_job.sh
 ./openclaw/log_rotate.sh
 ```
 
-## 6. ロールバック
+## 7. ロールバック
 
 - 自動実行を止める。
 - 問題のある変更をrevertする。

@@ -38,12 +38,18 @@ Page type: reference
 
 - `GOOGLE_APPLICATION_CREDENTIALS`
 - `P6AM_GOG_BIN` (default: `gog`)
+- `P6AM_GOG_ACCOUNT` (例: `you@example.com`, `gog` のAPI実行アカウント)
 - `P6AM_SHEETS_ID`
 - `P6AM_SHEETS_TAB`
 - `P6AM_SHEETS_RANGE` (例: `raw!A:M`)
 - `P6AM_SHEETS_INSERT_MODE` (default: `INSERT_ROWS`)
 - `P6AM_SHEETS_DEDUPE_DB` (例: `data/sheets-dedupe.keys`)
 - `P6AM_SHEETS_RETRY_QUEUE` (例: `tmp/sheets-retry.jsonl`)
+- `P6AM_DRIVE_PARENT_ID` (任意: 保存先フォルダの親フォルダID)
+- `P6AM_DRIVE_FOLDER_NAME` (default: `pixel6a-activity-monitor`)
+- `P6AM_SHEETS_TITLE` (default: `pixel6a-activity-monitor-raw`)
+- `P6AM_CONVERSATION_RANGE` (default: `conversation_log!A:H`)
+- `P6AM_PROVISION_OUTPUT_PATH` (default: `tmp/provision-data-target.env`)
 
 ## OpenClaw/Cron
 
