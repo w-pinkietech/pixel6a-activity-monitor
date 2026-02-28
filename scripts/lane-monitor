@@ -165,11 +165,27 @@ gh_mode() {
     printf 'missing'
     return
   fi
-  if gh auth status >/dev/null 2>&1; then
+
+  local status_json
+  status_json="$(gh auth status --hostname github.com --json hosts 2>&1 || true)"
+  if printf '%s' "$status_json" | grep -q '"state":"success"'; then
     printf 'ok'
     return
   fi
-  printf 'auth_err'
+
+  local detail_lc
+  detail_lc="$(printf '%s' "$status_json" | tr '[:upper:]' '[:lower:]')"
+  case "$detail_lc" in
+    *token*invalid*|*token*expired*|*bad\ credentials*|*authentication\ failed*|*failed\ to\ log\ in*|*requires\ authentication*)
+      printf 'auth_err'
+      ;;
+    *dial\ tcp*|*lookup*|*no\ such\ host*|*i/o\ timeout*|*timeout*|*timed\ out*|*could\ not\ resolve\ host*|*network\ is\ unreachable*|*connection\ refused*|*operation\ not\ permitted*|*tls\ handshake*|*temporary\ failure*)
+      printf 'net_err'
+      ;;
+    *)
+      printf 'gh_err'
+      ;;
+  esac
 }
 
 issue_status() {
@@ -181,6 +197,14 @@ issue_status() {
   fi
   if [ "$mode" = "auth_err" ]; then
     printf 'AUTH_ERR\t-\t-\t-'
+    return
+  fi
+  if [ "$mode" = "net_err" ]; then
+    printf 'NET_ERR\t-\t-\t-'
+    return
+  fi
+  if [ "$mode" = "gh_err" ]; then
+    printf 'GH_ERR\t-\t-\t-'
     return
   fi
 
@@ -208,6 +232,14 @@ pr_status() {
   fi
   if [ "$mode" = "auth_err" ]; then
     printf 'AUTH_ERR\t-\t-'
+    return
+  fi
+  if [ "$mode" = "net_err" ]; then
+    printf 'NET_ERR\t-\t-'
+    return
+  fi
+  if [ "$mode" = "gh_err" ]; then
+    printf 'GH_ERR\t-\t-'
     return
   fi
 
