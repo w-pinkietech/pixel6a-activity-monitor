@@ -125,11 +125,14 @@ gh auth status
 
 ## Preferred PR Operations
 
-- PR の review/prepare/merge は `gh` 直打ちより wrapper を優先する。
+- PR の create/review/prepare/merge は `gh` 直打ちより wrapper を優先する。
 - 使用順序:
+  - `scripts/pr-open --base main --title \"...\" --body-file ...`
   - `scripts/pr-review <PR>`
   - `scripts/pr-prepare run <PR>`
   - `scripts/pr-merge verify <PR>`
+
+`scripts/pr-open` は `pre-pr` 証跡（PASS）とHEAD一致を検証するため、Issue実装を含むPRでは必須とする。
 
 ## 3-Lane Background Monitor
 

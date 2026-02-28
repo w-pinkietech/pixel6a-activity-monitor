@@ -23,10 +23,12 @@ title: "Definition of Done"
 - リスクとロールバック案が PR本文に記録されている
 - `scripts/ci/pre-pr.sh` が成功している（`act` スキップ時は理由を `pre-pr-report` に残している）
 - `scripts/ci/pre-pr-report.sh` の結果が PR本文に反映されている
+- PR作成前に `scripts/pr-open` が成功している（`pre-pr` 証跡とHEAD一致を確認）
 
 ## Code Change Done Criteria
 
 - 回帰観点を含むテストを実施した
+- 実行テスト完了後にPRを作成した（テスト証跡が対象コミットと一致）
 - 破壊的変更がある場合は移行手順を明記した
 - 個人情報や秘密情報を追加していない
 

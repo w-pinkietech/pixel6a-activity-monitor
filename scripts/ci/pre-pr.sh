@@ -20,6 +20,8 @@ write_status() {
   local exit_code="$2"
   local act_result="$3"
   local act_reason="$4"
+  local git_head_sha
+  git_head_sha="$(git rev-parse HEAD 2>/dev/null || echo unknown)"
   cat > "${status_file}" <<EOF
 result=${result}
 event=${event}
@@ -29,6 +31,7 @@ exit_code=${exit_code}
 act_result=${act_result}
 act_reason=${act_reason}
 act_mode=${act_mode}
+git_head_sha=${git_head_sha}
 EOF
 }
 

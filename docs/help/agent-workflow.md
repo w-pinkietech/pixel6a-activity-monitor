@@ -57,6 +57,15 @@ scripts/agent-report implementer issue-25 --task "Google Calendar read path"
 
 main agent は各 subagent の報告を集約して、Issue/PR の最終コメントやhandoffに反映する。
 
+## PR Creation Gate
+
+Issue実装を含むPRは、実行テスト完了前に作成しない。
+
+- 必須:
+  - `./scripts/ci/pre-pr.sh`
+  - `./scripts/ci/pre-pr-report.sh`
+  - `scripts/pr-open` による証跡チェック
+
 ## Escalation Rules
 
 - 仕様衝突: `planner` に戻して plan を更新する

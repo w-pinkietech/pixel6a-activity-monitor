@@ -26,6 +26,7 @@ PR前の基本ゲート:
 ./scripts/ci/test-activity-judge.sh
 ./scripts/ci/test-ops-runtime.sh
 ./scripts/ci/pre-pr.sh
+./scripts/ci/pre-pr-report.sh
 ```
 
 - `docs-check.sh`: Markdown品質とリンク整合性を確認
@@ -37,6 +38,7 @@ PR前の基本ゲート:
 - `test-activity-judge.sh`: 1時間窓の距離判定と再実行安定性を検証
 - `test-ops-runtime.sh`: Tailnet事前確認、judge/notifyステップ失敗時の詳細ログ、retry、ログローテーションをモックで検証
 - `pre-pr.sh`: `act` でGitHub Actions相当のローカル実行（Docker不可環境では理由付きスキップ）
+- `pre-pr-report.sh`: PR本文へ貼る検証証跡を生成
 
 ## PR Workflow Gates
 
@@ -52,6 +54,12 @@ scripts/pr-merge verify <PR番号>
 
 ```bash
 scripts/pr-merge run <PR番号> --execute
+```
+
+PRを新規作成する前には `scripts/pr-open` を実行する。
+
+```bash
+scripts/pr-open --base main --title "<title>" --body-file <path>
 ```
 
 ## Scope

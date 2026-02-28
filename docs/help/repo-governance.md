@@ -29,6 +29,7 @@ Page type: reference
 - Issue と Plan のリンクを必須にする
 - `scripts/ci/pre-pr.sh` を通してからPR作成する（`act` スキップ時は理由を明記）
 - `scripts/ci/pre-pr-report.sh` の内容をPR本文に貼る
+- PR作成は `scripts/pr-open` を使い、`pre-pr` 証跡とHEAD一致を検証してから実行する
 - `scripts/pr-merge verify <PR>` の required checks 厳密判定を通す（0件や非passは不可）
 
 ## GitHub CLI Rules

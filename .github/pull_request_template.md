@@ -18,10 +18,12 @@
 - [ ] `docs/reference/dod` を確認した
 - [ ] `./scripts/ci/pre-pr.sh` が成功した
 - [ ] `./scripts/ci/pre-pr-report.sh` の結果を反映した
+- [ ] 実行テスト完了後にPRを作成した（`scripts/pr-open` チェック通過）
 
 ## Validation
 - Commands run:
 - Result:
+- Execution test evidence (`pre-pr.status`):
 - `act` run:
 - `pre-pr report`:
 
