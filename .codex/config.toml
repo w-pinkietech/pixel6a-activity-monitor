@@ -1,5 +1,6 @@
 [features]
 multi_agent = true
+unified_exec = true
 
 [agents]
 max_threads = 4
@@ -20,8 +21,12 @@ description = "Issue slicing agent that converts plans into scoped issue units."
 config_file = "agents/issue_planner.toml"
 
 [agents.implementer]
-description = "Implementation agent for one scoped issue from an approved plan."
+description = "Interactive implementer for direct user dialogue and scoped issue delivery."
 config_file = "agents/implementer.toml"
+
+[agents.implementer_bg]
+description = "Background implementer for unified_exec lane execution without direct dialogue."
+config_file = "agents/implementer_bg.toml"
 
 [agents.pr_reviewer]
 description = "PR review-only agent that must initialize artifacts via scripts/pr-review."
@@ -34,3 +39,11 @@ config_file = "agents/pr_preparer.toml"
 [agents.pr_merger]
 description = "Final merge-gate agent that verifies readiness and merges via scripts/pr-merge."
 config_file = "agents/pr_merger.toml"
+
+[profiles.interactive_dialog]
+model = "gpt-5.3-codex-spark"
+model_reasoning_effort = "high"
+
+[profiles.unified_exec_background]
+model = "gpt-5.3-codex-spark"
+model_reasoning_effort = "high"

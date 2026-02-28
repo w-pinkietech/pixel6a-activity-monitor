@@ -16,12 +16,8 @@ Config format (TSV):
 USAGE
 }
 
-require_cmd() {
-  local cmd="$1"
-  command -v "$cmd" >/dev/null 2>&1 || {
-    echo "missing required command: $cmd" >&2
-    exit 1
-  }
+command_exists() {
+  command -v "$1" >/dev/null 2>&1
 }
 
 repo_root() {
@@ -45,6 +41,39 @@ trim_text() {
     return
   fi
   printf '%s...' "${text:0:max_len-3}"
+}
+
+file_mtime_epoch() {
+  local file="$1"
+  if stat --version >/dev/null 2>&1; then
+    stat -c '%Y' "$file"
+    return
+  fi
+  stat -f '%m' "$file"
+}
+
+format_age() {
+  local total="$1"
+  local days hours minutes seconds
+  if [ "$total" -lt 60 ]; then
+    printf '%ss' "$total"
+    return
+  fi
+  if [ "$total" -lt 3600 ]; then
+    minutes=$((total / 60))
+    seconds=$((total % 60))
+    printf '%sm%ss' "$minutes" "$seconds"
+    return
+  fi
+  if [ "$total" -lt 86400 ]; then
+    hours=$((total / 3600))
+    minutes=$(((total % 3600) / 60))
+    printf '%sh%sm' "$hours" "$minutes"
+    return
+  fi
+  days=$((total / 86400))
+  hours=$(((total % 86400) / 3600))
+  printf '%sd%sh' "$days" "$hours"
 }
 
 config_default=".local/lanes.tsv"
@@ -131,10 +160,26 @@ is_running() {
   kill -0 "$pid" >/dev/null 2>&1
 }
 
+gh_mode() {
+  if ! command_exists gh; then
+    printf 'missing'
+    return
+  fi
+  if gh auth status >/dev/null 2>&1; then
+    printf 'ok'
+    return
+  fi
+  printf 'auth_err'
+}
+
 issue_status() {
   local issue="$1"
-  local gh_ready="$2"
-  if [ "$gh_ready" = "false" ]; then
+  local mode="$2"
+  if [ "$mode" = "missing" ]; then
+    printf 'NO_GH\t-\t-\t-'
+    return
+  fi
+  if [ "$mode" = "auth_err" ]; then
     printf 'AUTH_ERR\t-\t-\t-'
     return
   fi
@@ -152,12 +197,16 @@ issue_status() {
 
 pr_status() {
   local pr="$1"
-  local gh_ready="$2"
+  local mode="$2"
   if [ -z "$pr" ] || [ "$pr" = "-" ]; then
     printf '%s\t%s\t%s' '-' '-' '-'
     return
   fi
-  if [ "$gh_ready" = "false" ]; then
+  if [ "$mode" = "missing" ]; then
+    printf 'NO_GH\t-\t-'
+    return
+  fi
+  if [ "$mode" = "auth_err" ]; then
     printf 'AUTH_ERR\t-\t-'
     return
   fi
@@ -173,21 +222,81 @@ pr_status() {
   printf '%s/%s/%s\t%s\t-' "$state" "$draft" "$merge_status" "$url"
 }
 
+latest_report_info() {
+  local lane="$1"
+  local now best_epoch best_file
+  local report_dir epoch candidate base
+  now="$(date -u +%s)"
+  best_epoch=0
+  best_file=""
+
+  for report_dir in "$root/.worktrees/$lane/.local/agent-reports" "$root/.local/agent-reports"; do
+    [ -d "$report_dir" ] || continue
+    while IFS= read -r -d '' candidate; do
+      epoch="$(file_mtime_epoch "$candidate" 2>/dev/null || echo 0)"
+      if [ "$epoch" -gt "$best_epoch" ]; then
+        best_epoch="$epoch"
+        best_file="$candidate"
+      fi
+    done < <(find "$report_dir" -maxdepth 1 -type f -name '*.md' -print0 2>/dev/null)
+  done
+
+  if [ -z "$best_file" ]; then
+    printf '%s\t%s\t%s' '-' '-' '-'
+    return
+  fi
+
+  base="$(basename "$best_file")"
+  epoch=$((now - best_epoch))
+  if [ "$epoch" -lt 0 ]; then
+    epoch=0
+  fi
+  printf '%s\t%s\t%s' "$base" "$(format_age "$epoch")" "$best_file"
+}
+
+tmux_lane_state() {
+  local lane="$1"
+  local pane_out pane_dead pane_cmd
+  if ! command_exists tmux; then
+    printf 'NO_TMUX'
+    return
+  fi
+  if ! tmux has-session -t codex-lanes 2>/dev/null; then
+    printf 'NO_SESSION'
+    return
+  fi
+
+  pane_out="$(tmux list-panes -t "codex-lanes:$lane" -F '#{pane_dead}\t#{pane_current_command}' 2>/dev/null | head -n 1 || true)"
+  if [ -z "$pane_out" ]; then
+    printf 'MISSING'
+    return
+  fi
+
+  IFS=$'\t' read -r pane_dead pane_cmd <<< "$pane_out"
+  if [ "${pane_dead:-1}" = "1" ]; then
+    printf 'DEAD'
+    return
+  fi
+  if [ "${pane_cmd:-}" = "codex" ]; then
+    printf 'CODEX'
+    return
+  fi
+  pane_cmd="$(trim_text "${pane_cmd:-?}" 7)"
+  printf 'RUN:%s' "$pane_cmd"
+}
+
 snapshot() {
   ensure_config_exists
 
   local now gh_ready
   now="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
-  gh_ready="true"
-  if ! gh auth status >/dev/null 2>&1; then
-    gh_ready="false"
-  fi
+  gh_ready="$(gh_mode)"
 
   printf 'timestamp=%s\n' "$now"
   printf 'config=%s\n' "$config_path"
   printf 'gh_auth=%s\n' "$gh_ready"
-  printf '%-8s %-7s %-6s %-12s %-23s %-14s %-20s %s\n' \
-    "lane" "issue" "pr" "issue_state" "pr_state" "owner" "issue_title" "note"
+  printf '%-8s %-7s %-6s %-12s %-23s %-12s %-14s %-20s %-16s %-8s %s\n' \
+    "lane" "issue" "pr" "issue_state" "pr_state" "tmux" "owner" "issue_title" "last_report" "age" "note"
 
   while IFS=$'\t' read -r lane issue pr owner note || [ -n "${lane:-}" ]; do
     [ -z "${lane:-}" ] && continue
@@ -197,20 +306,28 @@ snapshot() {
     fi
 
     local issue_out pr_out issue_state issue_title issue_url pr_state pr_url
+    local tmux_state report_out report_file report_age report_path
     issue_out="$(issue_status "$issue" "$gh_ready")"
     pr_out="$(pr_status "${pr:-}" "$gh_ready")"
+    tmux_state="$(tmux_lane_state "$lane")"
+    report_out="$(latest_report_info "$lane")"
 
     IFS=$'\t' read -r issue_state issue_title issue_url _ <<< "$issue_out"
     IFS=$'\t' read -r pr_state pr_url _ <<< "$pr_out"
+    IFS=$'\t' read -r report_file report_age report_path <<< "$report_out"
 
     issue_title="$(trim_text "${issue_title:--}" 20)"
     note="$(trim_text "${note:--}" 50)"
+    report_file="$(trim_text "${report_file:--}" 16)"
 
-    printf '%-8s %-7s %-6s %-12s %-23s %-14s %-20s %s\n' \
-      "$lane" "$issue" "${pr:--}" "${issue_state:--}" "${pr_state:--}" "${owner:--}" "$issue_title" "$note"
+    printf '%-8s %-7s %-6s %-12s %-23s %-12s %-14s %-20s %-16s %-8s %s\n' \
+      "$lane" "$issue" "${pr:--}" "${issue_state:--}" "${pr_state:--}" "${tmux_state:--}" "${owner:--}" "$issue_title" "${report_file:--}" "${report_age:--}" "$note"
     printf '  issue_url: %s\n' "${issue_url:--}"
     if [ "${pr:-}" != "-" ] && [ -n "${pr:-}" ]; then
       printf '  pr_url:    %s\n' "${pr_url:--}"
+    fi
+    if [ "${report_path:--}" != "-" ]; then
+      printf '  report:    %s\n' "${report_path:--}"
     fi
   done < "$config_path"
 }
@@ -252,13 +369,9 @@ EOF
     echo "wrote $config_path"
     ;;
   once)
-    require_cmd gh
-    require_cmd jq
     write_snapshot_files
     ;;
   watch)
-    require_cmd gh
-    require_cmd jq
     while true; do
       clear
       write_snapshot_files
@@ -266,8 +379,6 @@ EOF
     done
     ;;
   start)
-    require_cmd gh
-    require_cmd jq
     ensure_state_dir
     if is_running; then
       echo "lane monitor already running (pid $(cat "$pid_file"))"
@@ -306,8 +417,6 @@ EOF
     fi
     ;;
   run-daemon)
-    require_cmd gh
-    require_cmd jq
     run_daemon_loop
     ;;
   *)

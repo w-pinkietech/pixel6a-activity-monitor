@@ -49,7 +49,8 @@ subagentを使う場合:
 
 実装フェーズでsubagentを使う場合:
 
-- 実装: `implementer`（対応skill: `issue-implementation`）
+- 標準: `implementer_bg` を使い、`scripts/lane-worker run <lane>` で実装〜PR作成まで background 実行する（`unified_exec` 前提）
+- 例外: `implementer` は仕様確認など対話が必要な場合のみ使う（対応skill: `issue-implementation`）
 
 PR向けsubagentを使う場合は、次の順で wrapper を実行する。
 
@@ -70,3 +71,8 @@ PRテンプレートに次を含める。
 - 検証コマンド
 - リスクとロールバック
 - `pre-pr-report` の結果
+
+## Related
+
+- [Workflow Design](/help/workflow-design)
+- [Agent Workflow](/help/agent-workflow)

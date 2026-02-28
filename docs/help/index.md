@@ -10,6 +10,7 @@ title: "Help"
 運用時の確認ルールとトラブル対応手順をまとめる。
 
 - [Issue, Plan, PR Flow](/help/issue-plan-pr)
+- [Workflow Design](/help/workflow-design)
 - [Agent Workflow](/help/agent-workflow)
 - [Parallel Implementation](/help/parallel-implementation)
 - [Repository Governance](/help/repo-governance)
