@@ -82,7 +82,30 @@ P6AM_JUDGE_NOW_UTC="$(date -u +%Y-%m-%dT%H:%M:%SZ)" ./openclaw/activity_judge.sh
 
 通知送信は OpenClaw 側で実行する。通知メッセージ仕様は `/gateway/openclaw-notification-contract` を参照。
 
-## 6. 運用ジョブ手動実行
+## 6. OpenClaw cron 登録・更新
+
+`collect-sheets` / `judge-notify` の定期実行は次のスクリプトで登録する。
+
+```bash
+P6AM_OPENCLAW_GATEWAY_URL=ws://127.0.0.1:18791 \
+P6AM_OPENCLAW_GATEWAY_TOKEN=your-token \
+P6AM_TERMUX_SSH_HOST=termux \
+P6AM_TERMUX_SSH_USER=u0_a569 \
+P6AM_TERMUX_TAILNET_TARGET=google-pixel-6a \
+P6AM_SHEETS_ID=sheet-id \
+P6AM_SHEETS_RANGE='raw!A:M' \
+P6AM_LOCATION_REQUEST=last \
+P6AM_TAILNET_TARGET=google-pixel-6a \
+./openclaw/register_cron_jobs.sh
+```
+
+登録結果の確認:
+
+```bash
+openclaw cron list --all --json --url ws://127.0.0.1:18791 --token your-token
+```
+
+## 7. 運用ジョブ手動実行
 
 ```bash
 P6AM_TAILNET_TARGET=google-pixel-6a ./openclaw/tailnet_precheck.sh
@@ -91,7 +114,7 @@ P6AM_TAILNET_TARGET=google-pixel-6a ./openclaw/judge_notify_job.sh
 ./openclaw/log_rotate.sh
 ```
 
-## 7. ロールバック
+## 8. ロールバック
 
 - 自動実行を止める。
 - 問題のある変更をrevertする。

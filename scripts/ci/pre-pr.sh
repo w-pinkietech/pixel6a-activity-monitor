@@ -64,6 +64,9 @@ echo "Running collect sheets job test"
 echo "Running provision data target test"
 ./scripts/ci/test-provision-data-target.sh
 
+echo "Running openclaw cron register test"
+./scripts/ci/test-openclaw-cron-register.sh
+
 echo "Running activity judge test"
 ./scripts/ci/test-activity-judge.sh
 
