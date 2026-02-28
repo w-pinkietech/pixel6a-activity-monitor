@@ -49,6 +49,20 @@ codex features list | rg '^multi_agent'
 
 - `multi_agent` が `true`
 
+## Session-Open Skill
+
+`session-open` は skill として運用する。
+
+- skill 定義: `.agents/skills/session-open/SKILL.md`
+- 実行内容の中心: `scripts/session-open`
+
+実行例:
+
+```text
+$session-open
+$session-open issue-28 を優先確認
+```
+
 ## How to Use
 
 1. 通常どおり `codex` でセッションを開始する。
