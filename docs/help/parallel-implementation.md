@@ -11,6 +11,8 @@ title: "Parallel Implementation"
 このページは「開発運用」の並列実装ルールだけを定義する。  
 プロダクト機能としての multi-agent 仕様は対象外。
 
+Page type: reference
+
 ## Scope
 
 - 対象: Issue分割、同時実装、PR統合
@@ -30,6 +32,17 @@ title: "Parallel Implementation"
 - 同じファイルを2 agentが同時に編集しない。
 - 競合しやすい共通ファイル（`AGENTS.md`, `docs/docs.json`, `scripts/ci/*`）は専任1 agentで扱う。
 - 各PRは「機能変更」と「運用/ドキュメント変更」を混ぜすぎない。
+
+## Execution Topology
+
+推奨実行形は次のとおり。
+
+- 1 lane = 1 worktree = 1 branch = 1 Codex CLI
+- lane 数は最大 3
+- lane ごとに担当 Issue を固定する
+- lane 間で同一ファイル編集を禁止する
+
+具体手順は [Codex Multi-Agent](/tools/codex-multi-agent) を参照する。
 
 ## Branch / PR Rules
 
@@ -58,4 +71,3 @@ title: "Parallel Implementation"
 - [Issue, Plan, PR Flow](/help/issue-plan-pr)
 - [Testing](/help/testing)
 - [Local CI with act](/help/local-ci-with-act)
-

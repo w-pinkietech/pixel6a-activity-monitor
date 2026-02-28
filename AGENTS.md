@@ -64,6 +64,22 @@
 | PR準備 | `pr_preparer` | `prepare-pr` | `.local/prep.md` と gate pass |
 | マージ判定 | `pr_merger` | `merge-pr` | merge可否の判断 |
 
+## Main/Subagent Reporting Contract
+
+- main agent は orchestration と最終サマリを担当する。
+- subagent は完了時に報告Markdownを作成し、main agent へパスを共有する。
+- 報告ファイルの保存先: `.local/agent-reports/`
+- 命名規則: `<UTC timestamp>-<agent>-<scope>.md`
+- 推奨コマンド: `scripts/agent-report <agent> <scope> --task "<task summary>"`
+
+報告Markdownの必須項目:
+
+- Task / Scope
+- What changed
+- Validation
+- Risks / Follow-ups
+- Handoff to main agent
+
 エスカレーション:
 
 - 仕様衝突: `planner` に戻して plan を更新する。

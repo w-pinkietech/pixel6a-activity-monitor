@@ -1,0 +1,99 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  cat <<'USAGE'
+Usage:
+  scripts/agent-report <agent> <scope> [--task "<text>"] [--out <path>]
+
+Example:
+  scripts/agent-report implementer issue-25 --task "Google Calendar read path"
+USAGE
+}
+
+sanitize_slug() {
+  local raw="$1"
+  printf '%s' "$raw" | tr '[:upper:]' '[:lower:]' | tr -cs 'a-z0-9._-' '-'
+}
+
+if [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
+  usage
+  exit 0
+fi
+
+if [ "$#" -lt 2 ]; then
+  usage
+  exit 2
+fi
+
+agent="$1"
+scope="$2"
+shift 2 || true
+
+task_text="-"
+out_path=""
+
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --task)
+      task_text="${2:-}"
+      shift 2
+      ;;
+    --out)
+      out_path="${2:-}"
+      shift 2
+      ;;
+    *)
+      echo "unknown option: $1" >&2
+      usage
+      exit 2
+      ;;
+  esac
+done
+
+timestamp="$(date -u +%Y%m%dT%H%M%SZ)"
+agent_slug="$(sanitize_slug "$agent")"
+scope_slug="$(sanitize_slug "$scope")"
+
+if [ -z "$out_path" ]; then
+  out_dir=".local/agent-reports"
+  mkdir -p "$out_dir"
+  out_path="$out_dir/${timestamp}-${agent_slug}-${scope_slug}.md"
+else
+  mkdir -p "$(dirname "$out_path")"
+fi
+
+branch="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "-")"
+worktree="$(pwd)"
+
+cat > "$out_path" <<EOF
+# Subagent Report
+
+## Metadata
+- Agent: ${agent}
+- Scope: ${scope}
+- Branch: ${branch}
+- Worktree: ${worktree}
+- Timestamp (UTC): ${timestamp}
+
+## Task / Scope
+- ${task_text}
+
+## What Changed
+- Files:
+- Behavior:
+
+## Validation
+- Commands:
+- Results:
+
+## Risks / Follow-ups
+-
+
+## Handoff to Main Agent
+- Ready status:
+- Open questions:
+- Next recommended action:
+EOF
+
+printf '%s\n' "$out_path"

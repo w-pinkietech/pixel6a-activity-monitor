@@ -10,6 +10,8 @@ title: "Repository Governance"
 
 このページは GitHub 運用の最小ルールを定義する。
 
+Page type: reference
+
 ## Branch Rules
 
 - `main` へ直接pushしない
@@ -18,6 +20,8 @@ title: "Repository Governance"
   - `feat/issue-<番号>-<slug>`
   - `fix/issue-<番号>-<slug>`
   - `docs/issue-<番号>-<slug>`
+- 並列実装時は lane ごとに worktree を分離する（例: `.worktrees/lane1`）。
+- 1 lane で同時に複数 Issue を持たない。
 
 ## PR Rules
 
@@ -31,7 +35,7 @@ title: "Repository Governance"
 
 - Issue/PR 操作前に `gh auth status` を実行し、token 有効性を確認する。
 - token 無効時は `gh auth login -h github.com -p ssh -w` で再認証する。
-- Codex 実行時に `gh` コマンドが接続失敗した場合は、sandbox 制約を疑い、ネットワーク許可あり（escalated 実行）で再実行する。
+- Codex 実行時に `gh` コマンドが接続失敗した場合は、実行コンテキストを切り分け、ネットワーク到達可能な環境で再実行する。
 - PR 操作は `gh pr *` 直実行より `scripts/pr-*` wrapper を優先する。
 
 ## Label Rules

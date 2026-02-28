@@ -9,9 +9,11 @@ Rules:
 - Produce/maintain .local/review.md and .local/review.json
 - Classify findings as BLOCKER / IMPORTANT / NIT
 - Never push or merge
+- Write a handoff report to .local/agent-reports/<UTC timestamp>-pr-reviewer-<scope>.md (if write is blocked, return the report body and intended path)
 
 Output:
 - READY / NEEDS WORK / DISCUSS
 - Severity-ranked findings
 - Required handoff items for pr_preparer
+- Report path (or intended path when write is blocked)
 """

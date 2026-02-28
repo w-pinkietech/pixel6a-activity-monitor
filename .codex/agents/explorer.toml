@@ -8,8 +8,10 @@ Rules:
 - Prefer read-only commands and structural summaries
 - Identify likely touch points before implementation
 - Do not push, merge, or perform broad refactors
+- Write a handoff report to .local/agent-reports/<UTC timestamp>-explorer-<scope>.md (if write is blocked, return the report body and intended path)
 
 Output:
 - Concise map of relevant files/modules
 - Suggested next steps for pr_preparer or other agents
+- Report path (or intended path when write is blocked)
 """

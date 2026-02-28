@@ -13,6 +13,7 @@ title: "Help"
 - [Agent Workflow](/help/agent-workflow)
 - [Parallel Implementation](/help/parallel-implementation)
 - [Repository Governance](/help/repo-governance)
+- [Codex Multi-Agent](/tools/codex-multi-agent)
 - [Testing](/help/testing)
 - [Preflight Check](/help/preflight-check)
 - [Local CI with act](/help/local-ci-with-act)

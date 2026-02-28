@@ -1,0 +1,318 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  cat <<'USAGE'
+Usage:
+  scripts/lane-monitor init [--config <path>] [--force]
+  scripts/lane-monitor once [--config <path>]
+  scripts/lane-monitor watch [--config <path>] [--interval <seconds>]
+  scripts/lane-monitor start [--config <path>] [--interval <seconds>]
+  scripts/lane-monitor stop [--config <path>]
+  scripts/lane-monitor status [--config <path>]
+
+Config format (TSV):
+  lane<TAB>issue<TAB>pr<TAB>owner<TAB>note
+USAGE
+}
+
+require_cmd() {
+  local cmd="$1"
+  command -v "$cmd" >/dev/null 2>&1 || {
+    echo "missing required command: $cmd" >&2
+    exit 1
+  }
+}
+
+repo_root() {
+  local script_dir
+  local common_git_dir
+  script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+  if common_git_dir=$(git -C "$script_dir" rev-parse --path-format=absolute --git-common-dir 2>/dev/null); then
+    (cd "$(dirname "$common_git_dir")" && pwd)
+    return
+  fi
+
+  (cd "$script_dir/.." && pwd)
+}
+
+trim_text() {
+  local text="$1"
+  local max_len="$2"
+  if [ "${#text}" -le "$max_len" ]; then
+    printf '%s' "$text"
+    return
+  fi
+  printf '%s...' "${text:0:max_len-3}"
+}
+
+config_default=".local/lanes.tsv"
+interval_default="60"
+
+mode="${1:-}"
+if [ -z "$mode" ] || [ "$mode" = "-h" ] || [ "$mode" = "--help" ]; then
+  usage
+  exit 0
+fi
+shift || true
+
+config_path="$config_default"
+interval="$interval_default"
+force="false"
+
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --config)
+      config_path="${2:-}"
+      shift 2
+      ;;
+    --interval)
+      interval="${2:-}"
+      shift 2
+      ;;
+    --force)
+      force="true"
+      shift
+      ;;
+    *)
+      echo "unknown option: $1" >&2
+      usage
+      exit 2
+      ;;
+  esac
+done
+
+case "$interval" in
+  ''|*[!0-9]*)
+    echo "--interval must be a positive integer" >&2
+    exit 2
+    ;;
+  0)
+    echo "--interval must be at least 1 second" >&2
+    exit 2
+    ;;
+esac
+
+root="$(repo_root)"
+cd "$root"
+
+if [[ "$config_path" != /* ]]; then
+  config_path="$root/$config_path"
+fi
+
+config_dir="$(dirname "$config_path")"
+state_dir="$config_dir/.lane-monitor"
+pid_file="$state_dir/pid"
+latest_file="$state_dir/latest.txt"
+history_file="$state_dir/history.log"
+
+ensure_state_dir() {
+  mkdir -p "$state_dir"
+}
+
+ensure_config_exists() {
+  if [ ! -f "$config_path" ]; then
+    echo "missing config: $config_path" >&2
+    echo "run: scripts/lane-monitor init --config $config_path" >&2
+    exit 1
+  fi
+}
+
+is_running() {
+  if [ ! -f "$pid_file" ]; then
+    return 1
+  fi
+  local pid
+  pid="$(cat "$pid_file" 2>/dev/null || true)"
+  if [ -z "$pid" ]; then
+    return 1
+  fi
+  kill -0 "$pid" >/dev/null 2>&1
+}
+
+issue_status() {
+  local issue="$1"
+  local gh_ready="$2"
+  if [ "$gh_ready" = "false" ]; then
+    printf 'AUTH_ERR\t-\t-\t-'
+    return
+  fi
+
+  local out
+  if ! out="$(gh issue view "$issue" --json state,title,url --jq '[.state,.title,.url] | @tsv' 2>/dev/null)"; then
+    printf 'ERR\t-\t-\t-'
+    return
+  fi
+
+  local state title url
+  IFS=$'\t' read -r state title url <<< "$out"
+  printf '%s\t%s\t%s\t-' "$state" "$title" "$url"
+}
+
+pr_status() {
+  local pr="$1"
+  local gh_ready="$2"
+  if [ -z "$pr" ] || [ "$pr" = "-" ]; then
+    printf '%s\t%s\t%s' '-' '-' '-'
+    return
+  fi
+  if [ "$gh_ready" = "false" ]; then
+    printf 'AUTH_ERR\t-\t-'
+    return
+  fi
+
+  local out
+  if ! out="$(gh pr view "$pr" --json state,isDraft,mergeStateStatus,url --jq '[.state, (if .isDraft then \"DRAFT\" else \"READY\" end), .mergeStateStatus, .url] | @tsv' 2>/dev/null)"; then
+    printf 'ERR\t-\t-'
+    return
+  fi
+
+  local state draft merge_status url
+  IFS=$'\t' read -r state draft merge_status url <<< "$out"
+  printf '%s/%s/%s\t%s\t-' "$state" "$draft" "$merge_status" "$url"
+}
+
+snapshot() {
+  ensure_config_exists
+
+  local now gh_ready
+  now="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+  gh_ready="true"
+  if ! gh auth status >/dev/null 2>&1; then
+    gh_ready="false"
+  fi
+
+  printf 'timestamp=%s\n' "$now"
+  printf 'config=%s\n' "$config_path"
+  printf 'gh_auth=%s\n' "$gh_ready"
+  printf '%-8s %-7s %-6s %-12s %-23s %-14s %-20s %s\n' \
+    "lane" "issue" "pr" "issue_state" "pr_state" "owner" "issue_title" "note"
+
+  while IFS=$'\t' read -r lane issue pr owner note || [ -n "${lane:-}" ]; do
+    [ -z "${lane:-}" ] && continue
+    [[ "$lane" = \#* ]] && continue
+    if [ -z "${issue:-}" ]; then
+      continue
+    fi
+
+    local issue_out pr_out issue_state issue_title issue_url pr_state pr_url
+    issue_out="$(issue_status "$issue" "$gh_ready")"
+    pr_out="$(pr_status "${pr:-}" "$gh_ready")"
+
+    IFS=$'\t' read -r issue_state issue_title issue_url _ <<< "$issue_out"
+    IFS=$'\t' read -r pr_state pr_url _ <<< "$pr_out"
+
+    issue_title="$(trim_text "${issue_title:--}" 20)"
+    note="$(trim_text "${note:--}" 50)"
+
+    printf '%-8s %-7s %-6s %-12s %-23s %-14s %-20s %s\n' \
+      "$lane" "$issue" "${pr:--}" "${issue_state:--}" "${pr_state:--}" "${owner:--}" "$issue_title" "$note"
+    printf '  issue_url: %s\n' "${issue_url:--}"
+    if [ "${pr:-}" != "-" ] && [ -n "${pr:-}" ]; then
+      printf '  pr_url:    %s\n' "${pr_url:--}"
+    fi
+  done < "$config_path"
+}
+
+write_snapshot_files() {
+  ensure_state_dir
+  local output
+  output="$(snapshot)"
+  printf '%s\n' "$output" > "$latest_file"
+  {
+    printf '==== %s ====\n' "$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+    printf '%s\n\n' "$output"
+  } >> "$history_file"
+  printf '%s\n' "$output"
+}
+
+run_daemon_loop() {
+  trap 'exit 0' INT TERM
+  while true; do
+    write_snapshot_files
+    sleep "$interval"
+  done
+}
+
+case "$mode" in
+  init)
+    mkdir -p "$config_dir"
+    if [ -f "$config_path" ] && [ "$force" != "true" ]; then
+      echo "config already exists: $config_path" >&2
+      echo "use --force to overwrite" >&2
+      exit 1
+    fi
+    cat > "$config_path" <<'EOF'
+# lane<TAB>issue<TAB>pr<TAB>owner<TAB>note
+lane1	25	-	codex-a	mvp lane 1
+lane2	26	-	codex-b	mvp lane 2
+lane3	27	-	codex-c	mvp lane 3
+EOF
+    echo "wrote $config_path"
+    ;;
+  once)
+    require_cmd gh
+    require_cmd jq
+    write_snapshot_files
+    ;;
+  watch)
+    require_cmd gh
+    require_cmd jq
+    while true; do
+      clear
+      write_snapshot_files
+      sleep "$interval"
+    done
+    ;;
+  start)
+    require_cmd gh
+    require_cmd jq
+    ensure_state_dir
+    if is_running; then
+      echo "lane monitor already running (pid $(cat "$pid_file"))"
+      exit 0
+    fi
+    rm -f "$pid_file"
+    nohup "$0" run-daemon --config "$config_path" --interval "$interval" > "$state_dir/live.log" 2>&1 &
+    echo "$!" > "$pid_file"
+    echo "lane monitor started (pid $(cat "$pid_file"))"
+    echo "log: $state_dir/live.log"
+    ;;
+  stop)
+    ensure_state_dir
+    if ! is_running; then
+      rm -f "$pid_file"
+      echo "lane monitor is not running"
+      exit 0
+    fi
+    pid="$(cat "$pid_file")"
+    kill "$pid"
+    rm -f "$pid_file"
+    echo "lane monitor stopped (pid $pid)"
+    ;;
+  status)
+    ensure_state_dir
+    if is_running; then
+      echo "lane monitor: running (pid $(cat "$pid_file"))"
+    else
+      echo "lane monitor: stopped"
+    fi
+    if [ -f "$latest_file" ]; then
+      echo
+      cat "$latest_file"
+    else
+      echo "no snapshot yet"
+    fi
+    ;;
+  run-daemon)
+    require_cmd gh
+    require_cmd jq
+    run_daemon_loop
+    ;;
+  *)
+    echo "unknown mode: $mode" >&2
+    usage
+    exit 2
+    ;;
+esac

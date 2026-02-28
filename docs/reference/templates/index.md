@@ -14,3 +14,4 @@ title: "Templates"
 - [TOOLS.md Template](/reference/templates/TOOLS)
 - [HEARTBEAT.md Template](/reference/templates/HEARTBEAT)
 - [BOOTSTRAP.md Template](/reference/templates/BOOTSTRAP)
+- [Subagent Report Template](/reference/templates/SUBAGENT_REPORT)

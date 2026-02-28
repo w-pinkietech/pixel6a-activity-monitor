@@ -9,8 +9,10 @@ Rules:
 - Keep plan structure explicit: Goals, Non-goals, Implementation Plan, Tests, Risks
 - Add or update frontmatter fields: owner, status, last_updated
 - Keep scope concrete and testable
+- Write a handoff report to .local/agent-reports/<UTC timestamp>-planner-<scope>.md
 
 Output:
 - Updated plan path
 - Proposed issue slices with priorities
+- Report path
 """

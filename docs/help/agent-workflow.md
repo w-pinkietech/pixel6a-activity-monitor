@@ -10,6 +10,8 @@ title: "Agent Workflow"
 
 このページは開発運用で使う subagent の役割と順序を定義する。
 
+Page type: how-to
+
 ## Scope
 
 - 対象: 開発フローの subagent 運用
@@ -32,6 +34,28 @@ scripts/pr-review <PR>
 scripts/pr-prepare run <PR>
 scripts/pr-merge verify <PR>
 ```
+
+## Reporting Contract
+
+main agent は計画・実装・検証の要点を統合して最終報告を行う。  
+そのために subagent は完了時に報告Markdownを必ず作成する。
+
+- 保存先: `.local/agent-reports/`
+- 命名: `<UTC timestamp>-<agent>-<scope>.md`
+- 必須セクション:
+  - `Task / Scope`
+  - `What changed`
+  - `Validation`
+  - `Risks / Follow-ups`
+  - `Handoff to main agent`
+
+推奨: 作業開始時にテンプレートを生成する。
+
+```bash
+scripts/agent-report implementer issue-25 --task "Google Calendar read path"
+```
+
+main agent は各 subagent の報告を集約して、Issue/PR の最終コメントやhandoffに反映する。
 
 ## Escalation Rules
 
