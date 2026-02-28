@@ -1,0 +1,617 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  cat <<'USAGE'
+Usage:
+  scripts/lane-worker run <lane> [--config <path>] [--dry-run]
+  scripts/lane-worker run-all [--config <path>] [--dry-run]
+  scripts/lane-worker stop <lane>
+  scripts/lane-worker status [--config <path>]
+  scripts/lane-worker sync-pr <lane> [--config <path>]
+
+Description:
+  Execute issue-to-PR implementation flow in background lane workers.
+  Input is .local/lanes.tsv with columns:
+    lane<TAB>issue<TAB>pr<TAB>owner<TAB>note
+USAGE
+}
+
+command_exists() {
+  command -v "$1" >/dev/null 2>&1
+}
+
+require_cmd() {
+  local cmd="$1"
+  command_exists "$cmd" || {
+    echo "missing required command: $cmd" >&2
+    exit 1
+  }
+}
+
+repo_root() {
+  local script_dir
+  local common_git_dir
+  script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+  if common_git_dir=$(git -C "$script_dir" rev-parse --path-format=absolute --git-common-dir 2>/dev/null); then
+    (cd "$(dirname "$common_git_dir")" && pwd)
+    return
+  fi
+
+  (cd "$script_dir/.." && pwd)
+}
+
+trim_text() {
+  local text="$1"
+  local max_len="$2"
+  if [ "${#text}" -le "$max_len" ]; then
+    printf '%s' "$text"
+    return
+  fi
+  printf '%s...' "${text:0:max_len-3}"
+}
+
+sanitize_slug() {
+  local text="$1"
+  text="$(printf '%s' "$text" | tr '[:upper:]' '[:lower:]' | tr -cs 'a-z0-9' '-')"
+  text="${text#-}"
+  text="${text%-}"
+  if [ -z "$text" ]; then
+    text="task"
+  fi
+  printf '%s' "$text"
+}
+
+pick_base_ref() {
+  if git show-ref --verify --quiet refs/remotes/origin/main; then
+    printf 'origin/main'
+    return
+  fi
+  if git show-ref --verify --quiet refs/heads/main; then
+    printf 'main'
+    return
+  fi
+  git rev-parse --abbrev-ref HEAD
+}
+
+lane_lookup() {
+  local target_lane="$1"
+  local lane issue pr owner note
+  while IFS=$'\t' read -r lane issue pr owner note || [ -n "${lane:-}" ]; do
+    [ -z "${lane:-}" ] && continue
+    [[ "$lane" = \#* ]] && continue
+    if [ "$lane" = "$target_lane" ]; then
+      printf '%s\t%s\t%s\t%s\t%s\n' "${lane:-}" "${issue:-}" "${pr:-}" "${owner:-}" "${note:-}"
+      return 0
+    fi
+  done < "$config_path"
+  return 1
+}
+
+lane_list() {
+  local lane issue pr owner note
+  while IFS=$'\t' read -r lane issue pr owner note || [ -n "${lane:-}" ]; do
+    [ -z "${lane:-}" ] && continue
+    [[ "$lane" = \#* ]] && continue
+    [ -z "${issue:-}" ] && continue
+    printf '%s\n' "$lane"
+  done < "$config_path"
+}
+
+update_lane_pr() {
+  local lane_target="$1"
+  local new_pr="$2"
+  local tmp_file
+  tmp_file="$(mktemp "${config_path}.tmp.XXXXXX")"
+  awk -F'\t' -v OFS='\t' -v lane="$lane_target" -v pr="$new_pr" '
+    BEGIN { updated=0 }
+    /^[[:space:]]*#/ { print; next }
+    NF == 0 { print; next }
+    $1 == lane {
+      if (NF < 5) {
+        while (NF < 5) {
+          $(NF+1) = "-"
+        }
+      }
+      $3 = pr
+      updated=1
+      print
+      next
+    }
+    { print }
+    END {
+      if (updated == 0) {
+        exit 7
+      }
+    }
+  ' "$config_path" > "$tmp_file" || {
+    rc=$?
+    rm -f "$tmp_file"
+    if [ "$rc" -eq 7 ]; then
+      echo "lane not found in config: $lane_target" >&2
+    fi
+    exit 1
+  }
+  mv "$tmp_file" "$config_path"
+}
+
+pid_file_for_lane() {
+  local lane="$1"
+  printf '%s/%s.pid' "$state_dir" "$lane"
+}
+
+exit_file_for_lane() {
+  local lane="$1"
+  printf '%s/%s.exit' "$state_dir" "$lane"
+}
+
+read_pid() {
+  local lane="$1"
+  local pid_file pid
+  pid_file="$(pid_file_for_lane "$lane")"
+  if [ ! -f "$pid_file" ]; then
+    return 1
+  fi
+  pid="$(cat "$pid_file" 2>/dev/null || true)"
+  if [ -z "$pid" ]; then
+    return 1
+  fi
+  printf '%s' "$pid"
+}
+
+lane_is_running() {
+  local lane="$1"
+  local pid
+  pid="$(read_pid "$lane" || true)"
+  if [ -z "$pid" ]; then
+    return 1
+  fi
+  kill -0 "$pid" >/dev/null 2>&1
+}
+
+gh_mode() {
+  if ! command_exists gh; then
+    printf 'missing'
+    return
+  fi
+  if gh auth status >/dev/null 2>&1; then
+    printf 'ok'
+    return
+  fi
+  printf 'auth_err'
+}
+
+fetch_issue_meta() {
+  local issue="$1"
+  local mode="$2"
+  local note
+  note="$3"
+  ISSUE_TITLE="issue-$issue"
+  ISSUE_BODY="-"
+  ISSUE_URL="-"
+  if [ "$mode" != "ok" ]; then
+    if [ -n "$note" ] && [ "$note" != "-" ]; then
+      ISSUE_TITLE="$note"
+    fi
+    return
+  fi
+
+  if ! ISSUE_TITLE="$(gh issue view "$issue" --json title --jq .title 2>/dev/null)"; then
+    ISSUE_TITLE="issue-$issue"
+  fi
+  if ! ISSUE_BODY="$(gh issue view "$issue" --json body --jq .body 2>/dev/null)"; then
+    ISSUE_BODY="-"
+  fi
+  if ! ISSUE_URL="$(gh issue view "$issue" --json url --jq .url 2>/dev/null)"; then
+    ISSUE_URL="-"
+  fi
+  if [ -z "$ISSUE_TITLE" ] || [ "$ISSUE_TITLE" = "null" ]; then
+    ISSUE_TITLE="$note"
+  fi
+  if [ -z "$ISSUE_TITLE" ] || [ "$ISSUE_TITLE" = "null" ]; then
+    ISSUE_TITLE="issue-$issue"
+  fi
+  if [ -z "$ISSUE_BODY" ] || [ "$ISSUE_BODY" = "null" ]; then
+    ISSUE_BODY="-"
+  fi
+  if [ -z "$ISSUE_URL" ] || [ "$ISSUE_URL" = "null" ]; then
+    ISSUE_URL="-"
+  fi
+}
+
+ensure_worktree() {
+  local lane="$1"
+  local issue="$2"
+  local title_hint="$3"
+  local create_if_missing="${4:-true}"
+  local slug branch base_ref dir
+
+  slug="$(sanitize_slug "$title_hint")"
+  branch="feat/issue-${issue}-${slug}"
+  branch="${branch:0:90}"
+  branch="${branch%-}"
+  dir="$root/.worktrees/$lane"
+  base_ref="$(pick_base_ref)"
+
+  mkdir -p "$root/.worktrees"
+
+  if [ -d "$dir" ]; then
+    branch="$(git -C "$dir" rev-parse --abbrev-ref HEAD 2>/dev/null || printf '%s' "$branch")"
+    printf '%s\t%s\n' "$dir" "$branch"
+    return
+  fi
+
+  if [ "$create_if_missing" != "true" ]; then
+    printf '%s\t%s\n' "$dir" "$branch"
+    return
+  fi
+
+  if git show-ref --verify --quiet "refs/heads/$branch"; then
+    git worktree add "$dir" "$branch" >/dev/null
+  else
+    git worktree add "$dir" -b "$branch" "$base_ref" >/dev/null
+  fi
+
+  printf '%s\t%s\n' "$dir" "$branch"
+}
+
+write_prompt_file() {
+  local lane="$1"
+  local issue="$2"
+  local issue_title="$3"
+  local issue_body="$4"
+  local issue_url="$5"
+  local owner="$6"
+  local note="$7"
+  local branch="$8"
+  local worktree="$9"
+
+  local prompt_dir prompt_file task_text
+  prompt_dir="$root/.local/lane-worker/prompts"
+  mkdir -p "$prompt_dir"
+
+  prompt_file="$prompt_dir/${lane}-issue-${issue}.md"
+  task_text="$(printf '%s' "$issue_title" | tr '\n' ' ' | sed 's/[[:space:]]\+/ /g')"
+
+  cat > "$prompt_file" <<EOF
+Use agent implementer_bg and skill \$issue-implementation.
+
+You are implementing one GitHub issue in this worktree and should finish at PR creation.
+
+Lane metadata:
+- lane: ${lane}
+- owner: ${owner:--}
+- issue: #${issue}
+- issue title: ${issue_title}
+- issue url: ${issue_url}
+- branch: ${branch}
+- worktree: ${worktree}
+- note: ${note:--}
+
+Issue body:
+${issue_body}
+
+Required workflow:
+1. Read AGENTS.md and keep scope strictly within issue #${issue}.
+2. Implement changes in this worktree only.
+3. Run validation:
+   - ./scripts/ci/pre-pr.sh
+   - ./scripts/ci/pre-pr-report.sh
+4. Generate a subagent report and fill all required sections:
+   - scripts/agent-report implementer issue-${issue} --task "${task_text}"
+5. Commit changes with a concise message.
+6. Push branch ${branch} to origin.
+7. Create or update a PR for this branch targeting main. PR body must include:
+   - Issue URL
+   - Plan URL (if present)
+   - Validation commands and outcomes
+   - Risks and rollback
+   - Content of .local/pre-pr-report.md
+8. In the final response, print:
+   - PR URL
+   - PR number
+   - Validation commands run
+   - Report file path
+
+If blocked, stop and report the blocker with concrete command output.
+EOF
+
+  printf '%s\n' "$prompt_file"
+}
+
+write_runner_script() {
+  local lane="$1"
+  local issue="$2"
+  local branch="$3"
+  local worktree="$4"
+  local prompt_file="$5"
+  local runner_file="$6"
+  local log_file="$7"
+  local last_message_file="$8"
+  local pid_file="$9"
+  local exit_file="${10}"
+
+  cat > "$runner_file" <<EOF
+#!/usr/bin/env bash
+set -euo pipefail
+
+root="$root"
+config_path="$config_path"
+lane="$lane"
+issue="$issue"
+branch="$branch"
+worktree="$worktree"
+prompt_file="$prompt_file"
+log_file="$log_file"
+last_message_file="$last_message_file"
+pid_file="$pid_file"
+exit_file="$exit_file"
+
+mkdir -p "\$(dirname "\$log_file")"
+mkdir -p "\$(dirname "\$last_message_file")"
+mkdir -p "\$worktree/.local"
+
+exec >>"\$log_file" 2>&1
+
+echo "[lane-worker] lane=\$lane issue=\$issue branch=\$branch started=\$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+cd "\$worktree"
+if codex exec --enable unified_exec --sandbox workspace-write --color never --cd "\$worktree" --output-last-message "\$last_message_file" - < "\$prompt_file"; then
+  rc=0
+else
+  rc=\$?
+fi
+
+echo "[lane-worker] codex_exit=\$rc finished=\$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+if [ "\$rc" -eq 0 ]; then
+  "\$root/scripts/lane-worker" sync-pr "\$lane" --config "\$config_path" || true
+fi
+
+printf '%s\n' "\$rc" > "\$exit_file"
+rm -f "\$pid_file"
+
+exit "\$rc"
+EOF
+  chmod +x "$runner_file"
+}
+
+launch_lane() {
+  local lane="$1"
+  local dry_run="$2"
+  local record issue pr owner note
+  local issue_title issue_body issue_url
+  local worktree branch ensure_out prompt_file
+  local runner_file log_file last_message_file
+  local pid_file exit_file pid
+  local gh_ready
+
+  record="$(lane_lookup "$lane" || true)"
+  if [ -z "$record" ]; then
+    echo "lane not found: $lane" >&2
+    exit 1
+  fi
+  IFS=$'\t' read -r _ issue pr owner note <<< "$record"
+  if [ -z "${issue:-}" ] || [ "$issue" = "-" ]; then
+    echo "lane $lane has empty issue; set it in $config_path" >&2
+    exit 1
+  fi
+
+  gh_ready="$(gh_mode)"
+  fetch_issue_meta "$issue" "$gh_ready" "${note:--}"
+  issue_title="$ISSUE_TITLE"
+  issue_body="$ISSUE_BODY"
+  issue_url="$ISSUE_URL"
+  if [ "$dry_run" = "true" ]; then
+    ensure_out="$(ensure_worktree "$lane" "$issue" "$issue_title" "false")"
+  else
+    ensure_out="$(ensure_worktree "$lane" "$issue" "$issue_title" "true")"
+  fi
+  IFS=$'\t' read -r worktree branch <<< "$ensure_out"
+  prompt_file="$(write_prompt_file "$lane" "$issue" "$issue_title" "$issue_body" "$issue_url" "${owner:--}" "${note:--}" "$branch" "$worktree")"
+
+  runner_file="$state_dir/run-${lane}.sh"
+  log_file="$state_dir/${lane}.log"
+  last_message_file="$state_dir/${lane}-last-message.txt"
+  pid_file="$(pid_file_for_lane "$lane")"
+  exit_file="$(exit_file_for_lane "$lane")"
+  write_runner_script "$lane" "$issue" "$branch" "$worktree" "$prompt_file" "$runner_file" "$log_file" "$last_message_file" "$pid_file" "$exit_file"
+
+  if [ "$dry_run" = "true" ]; then
+    echo "dry-run: lane=$lane issue=$issue"
+    echo "  worktree: $worktree"
+    echo "  branch: $branch"
+    echo "  prompt: $prompt_file"
+    echo "  runner: $runner_file"
+    echo "  log: $log_file"
+    echo "  pid: $pid_file"
+    echo "  exit: $exit_file"
+    return 0
+  fi
+
+  if lane_is_running "$lane"; then
+    pid="$(read_pid "$lane" || true)"
+    echo "lane already running: $lane (pid $pid)" >&2
+    exit 1
+  fi
+
+  rm -f "$exit_file"
+  nohup bash "$runner_file" >/dev/null 2>&1 &
+  pid="$!"
+  printf '%s\n' "$pid" > "$pid_file"
+
+  echo "started lane=${lane} issue=${issue} pid=${pid}"
+  echo "log: $log_file"
+}
+
+stop_lane() {
+  local lane="$1"
+  local pid_file exit_file pid
+  pid_file="$(pid_file_for_lane "$lane")"
+  exit_file="$(exit_file_for_lane "$lane")"
+
+  if ! lane_is_running "$lane"; then
+    rm -f "$pid_file"
+    echo "lane is not running: $lane"
+    return 0
+  fi
+
+  pid="$(read_pid "$lane")"
+  kill "$pid" >/dev/null 2>&1 || true
+  sleep 1
+  if kill -0 "$pid" >/dev/null 2>&1; then
+    kill -9 "$pid" >/dev/null 2>&1 || true
+  fi
+
+  rm -f "$pid_file"
+  printf '%s\n' "130" > "$exit_file"
+  echo "stopped lane=$lane pid=$pid"
+}
+
+sync_lane_pr() {
+  local lane="$1"
+  local record issue pr owner note
+  local branch pr_number
+  local lane_dir
+
+  record="$(lane_lookup "$lane" || true)"
+  if [ -z "$record" ]; then
+    echo "lane not found: $lane" >&2
+    exit 1
+  fi
+  IFS=$'\t' read -r _ issue pr owner note <<< "$record"
+  lane_dir="$root/.worktrees/$lane"
+  if [ ! -d "$lane_dir" ]; then
+    echo "worktree missing for lane $lane: $lane_dir"
+    return 0
+  fi
+
+  branch="$(git -C "$lane_dir" rev-parse --abbrev-ref HEAD)"
+  case "$(gh_mode)" in
+    ok)
+      pr_number="$(gh pr list --head "$branch" --json number --jq '.[0].number // empty' 2>/dev/null || true)"
+      if [ -n "$pr_number" ]; then
+        update_lane_pr "$lane" "$pr_number"
+        echo "synced lane=$lane pr=$pr_number"
+      else
+        echo "no PR found yet for lane=$lane branch=$branch"
+      fi
+      ;;
+    *)
+      echo "skip sync-pr: gh unavailable or unauthorized"
+      ;;
+  esac
+}
+
+status_all() {
+  local lane
+  printf '%-8s %-14s %-12s %s\n' "lane" "state" "pr" "note"
+  for lane in $(lane_list); do
+    local record issue pr owner note state log_file pid exit_file rc
+    record="$(lane_lookup "$lane")"
+    IFS=$'\t' read -r _ issue pr owner note <<< "$record"
+    if lane_is_running "$lane"; then
+      pid="$(read_pid "$lane" || true)"
+      state="RUNNING($pid)"
+    else
+      exit_file="$(exit_file_for_lane "$lane")"
+      if [ -f "$exit_file" ]; then
+        rc="$(cat "$exit_file" 2>/dev/null || echo '?')"
+        state="EXIT($rc)"
+      else
+        state="IDLE"
+      fi
+    fi
+    printf '%-8s %-14s %-12s %s\n' "$lane" "$state" "${pr:--}" "${note:--}"
+    log_file="$state_dir/${lane}.log"
+    if [ -f "$log_file" ]; then
+      printf '  log: %s\n' "$log_file"
+      printf '  tail: %s\n' "$(tail -n 1 "$log_file" | tr '\n' ' ' || true)"
+    fi
+  done
+}
+
+mode="${1:-}"
+if [ -z "$mode" ] || [ "$mode" = "-h" ] || [ "$mode" = "--help" ]; then
+  usage
+  exit 0
+fi
+shift || true
+
+config_path=".local/lanes.tsv"
+dry_run="false"
+lane_arg=""
+
+if [ "$mode" = "run" ] || [ "$mode" = "stop" ] || [ "$mode" = "sync-pr" ]; then
+  if [ "$#" -lt 1 ]; then
+    echo "missing lane" >&2
+    usage
+    exit 2
+  fi
+  lane_arg="$1"
+  shift || true
+fi
+
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --config)
+      config_path="${2:-}"
+      shift 2
+      ;;
+    --dry-run)
+      dry_run="true"
+      shift
+      ;;
+    *)
+      echo "unknown option: $1" >&2
+      usage
+      exit 2
+      ;;
+  esac
+done
+
+root="$(repo_root)"
+cd "$root"
+
+if [[ "$config_path" != /* ]]; then
+  config_path="$root/$config_path"
+fi
+if [ ! -f "$config_path" ]; then
+  echo "missing config: $config_path" >&2
+  echo "run: scripts/lane-monitor init --config $config_path" >&2
+  exit 1
+fi
+
+state_dir="$root/.local/lane-worker"
+mkdir -p "$state_dir"
+
+case "$mode" in
+  run)
+    require_cmd git
+    require_cmd codex
+    launch_lane "$lane_arg" "$dry_run"
+    ;;
+  run-all)
+    require_cmd git
+    require_cmd codex
+    for lane in $(lane_list); do
+      launch_lane "$lane" "$dry_run"
+    done
+    ;;
+  stop)
+    stop_lane "$lane_arg"
+    ;;
+  status)
+    status_all
+    ;;
+  sync-pr)
+    require_cmd git
+    sync_lane_pr "$lane_arg"
+    ;;
+  *)
+    echo "unknown mode: $mode" >&2
+    usage
+    exit 2
+    ;;
+esac
