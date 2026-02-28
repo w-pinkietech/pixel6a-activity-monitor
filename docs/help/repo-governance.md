@@ -39,6 +39,8 @@ Page type: reference
 - token 無効時は `gh auth login -h github.com -p ssh -w` で再認証する。
 - Codex 実行時に `gh` コマンドが接続失敗した場合は、実行コンテキストを切り分け、ネットワーク到達可能な環境で再実行する。
 - PR 操作は `gh pr *` 直実行より `scripts/pr-*` wrapper を優先する。
+- `scripts/pr-review <PR>` は `.worktrees/pr-<PR>` をクリーン再作成する前提で使い、prepare 再実行時は review からやり直す。
+- `scripts/pr-prepare run <PR>` は review 時点から PR head/commit set が変化していたら失敗する。失敗時は `scripts/pr-review <PR>` を再実行して基準を更新する。
 
 ## Label Rules
 
