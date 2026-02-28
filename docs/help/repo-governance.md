@@ -27,6 +27,13 @@ title: "Repository Governance"
 - `scripts/ci/pre-pr-report.sh` の内容をPR本文に貼る
 - `scripts/pr-merge verify <PR>` の required checks 厳密判定を通す（0件や非passは不可）
 
+## GitHub CLI Rules
+
+- Issue/PR 操作前に `gh auth status` を実行し、token 有効性を確認する。
+- token 無効時は `gh auth login -h github.com -p ssh -w` で再認証する。
+- Codex 実行時に `gh` コマンドが接続失敗した場合は、sandbox 制約を疑い、ネットワーク許可あり（escalated 実行）で再実行する。
+- PR 操作は `gh pr *` 直実行より `scripts/pr-*` wrapper を優先する。
+
 ## Label Rules
 
 ラベル定義は `.github/labels.yml` を正本にする。

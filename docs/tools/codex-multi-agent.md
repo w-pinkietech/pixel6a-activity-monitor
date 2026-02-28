@@ -58,3 +58,29 @@ codex features list | rg '^multi_agent'
 
 - `features.multi_agent = true` が必須。
 - 役割設定には既知キーのみを使う（未知キーは起動時エラー）。
+
+## GitHub CLI Guardrails
+
+Issue/PR を Codex から操作する場合は、次を標準手順にする。
+
+1. 事前に `gh auth status` を実行し、token が有効であることを確認する。
+2. token 無効時は再認証する。
+
+```bash
+gh auth logout -h github.com -u cycling777
+gh auth login -h github.com -p ssh -w
+gh auth status
+```
+
+3. `gh issue create` / `gh issue comment` / `gh pr *` はネットワーク必須のため、sandbox 制約で失敗した場合は escalated 実行で再実行する。
+4. 失敗時は原因を切り分ける。
+   - `The token ... is invalid` -> 認証切れ
+   - `error connecting to github.com` -> 実行コンテキスト（sandbox）由来の接続失敗の可能性
+
+## Preferred PR Operations
+
+- PR の review/prepare/merge は `gh` 直打ちより wrapper を優先する。
+- 使用順序:
+  - `scripts/pr-review <PR>`
+  - `scripts/pr-prepare run <PR>`
+  - `scripts/pr-merge verify <PR>`
