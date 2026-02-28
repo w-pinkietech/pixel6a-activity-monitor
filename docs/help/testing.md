@@ -48,7 +48,7 @@ PR前の基本ゲート:
 
 次の変更を含むPRでは、3lane同時実行スモークを必須にする。
 
-- `scripts/lane-monitor`
+- `scripts/lane-worker`
 - `scripts/pr-open`
 - `.codex/agents/*`
 - `docs/help/parallel-implementation.md`

@@ -35,7 +35,7 @@ title: "Definition of Done"
 
 ## Parallel Ops Change Done Criteria
 
-- `scripts/lane-monitor`, `scripts/pr-open`, `.codex/agents/*`, `docs/help/parallel-implementation.md`, `docs/tools/codex-multi-agent.md` の変更を含む場合は `./scripts/ci/test-3lane-smoke.sh` を実行する
+- `scripts/lane-worker`, `scripts/pr-open`, `.codex/agents/*`, `docs/help/parallel-implementation.md`, `docs/tools/codex-multi-agent.md` の変更を含む場合は `./scripts/ci/test-3lane-smoke.sh` を実行する
 - 3laneスモークレポートのパスまたは要約結果を PR本文/コメントに残す
 
 ## Docs Change Done Criteria
