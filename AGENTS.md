@@ -131,7 +131,8 @@
 - 標準運用は `implementer_bg` を使い、`scripts/lane-worker` で Issue 実装から PR 作成までを background 実行する。
 - `lane-worker` は `codex exec --enable unified_exec` を前提に動かす。
 - `implementer` は、仕様確認やスコープ調整などユーザーとの直接対話が必要な場合のみ使う。
-- `scripts/pr-review` / `scripts/pr-prepare run` / `scripts/pr-merge verify` は background terminal で実行してよい。
+- `scripts/pr-review` / `scripts/pr-prepare run` / `scripts/pr-merge verify` は background terminal 実行を標準にする。
+- PR系は `review -> prepare -> merge verify` を直列に自走し、完了通知または停止条件ヒット時のみ main/user へ報告する。
 - 実マージ（`scripts/pr-merge run <PR> --execute`）は明示依頼がある場合のみ実行する。
 
 ## Main/Subagent Reporting Contract
@@ -173,6 +174,8 @@
 ## PR and Merge Rules
 
 - script-first contract: `scripts/pr` を正本とし、wrapper から呼び出す。
+- 実行主体は main agent ではなく、対応 skill を実行する subagent とする。
+- `pr_reviewer` / `pr_preparer` / `pr_merger` は background terminal で実行し、原則ノンブロッキングで進める。
 - PR作成時は `gh pr create` 直実行ではなく `scripts/pr-open` を使う。
 - Issue実装を含むPRは、実行テスト完了（`pre-pr.status` が `PASS` かつ現HEAD一致）前に作成しない。
 - レビュー初期化: `scripts/pr-review <PR>`

@@ -58,7 +58,8 @@ codex features list | rg '^multi_agent'
 5. 調査が必要な場合は `explorer` を使う。
 6. 実装〜PR作成は `scripts/lane-worker` から `implementer_bg` を使って background 実行する。
 7. 仕様確認など対話が必要な場合のみ `implementer` を使う。
-8. PR作業は `pr_reviewer` -> `pr_preparer` -> `pr_merger` の順で実行する。
+8. PR作業は `pr_reviewer` -> `pr_preparer` -> `pr_merger` の順で background 実行する。
+9. 人間への確認は停止条件ヒット時か、実マージ依頼時のみ行う。
 
 ## Recommended Topology (3 lanes)
 
@@ -159,6 +160,8 @@ gh auth status
   - `scripts/pr-review <PR>`
   - `scripts/pr-prepare run <PR>`
   - `scripts/pr-merge verify <PR>`
+- 実行主体は対応 subagent（`pr_reviewer` / `pr_preparer` / `pr_merger`）とし、background terminal で直列実行する。
+- 通常報告は「完了」または「停止条件」のタイミングで行い、途中の逐次承認は要求しない。
 
 `scripts/pr-open` は `pre-pr` 証跡（PASS）とHEAD一致を検証するため、Issue実装を含むPRでは必須とする。
 

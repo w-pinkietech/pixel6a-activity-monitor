@@ -38,6 +38,20 @@ scripts/pr-prepare run <PR>
 scripts/pr-merge verify <PR>
 ```
 
+## Background PR Pipeline
+
+PR工程は background terminal で直列自走する。
+
+1. `pr_reviewer`: `scripts/pr-review <PR>` を実行し、`review.*` を出力
+2. `pr_preparer`: `scripts/pr-prepare run <PR>` を実行し、gate を通す
+3. `pr_merger`: `scripts/pr-merge verify <PR>` で最終判定
+
+人間へ割り込むのは次の場合だけにする。
+
+- 仕様衝突や判断不能な曖昧さがある
+- required checks や gate 失敗を修復できない
+- 実マージ実行（`scripts/pr-merge run <PR> --execute`）が必要
+
 ## Reporting Contract
 
 main agent は計画・実装・検証の要点を統合して最終報告を行う。  

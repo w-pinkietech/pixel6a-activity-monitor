@@ -8,6 +8,9 @@
 - [x] Scope: `scripts/pr-prepare` の stale worktree / commit 混在起因の失敗を根本対応する。
 - [x] Implementation: `scripts/pr` に clean start、prepare preflight、review基準との commit set 整合チェックを追加する。
 - [x] Validation: 正常系（review->prepare->merge verify）と異常系（commit set 不整合）を確認する。
+- [x] Scope: `pr_reviewer` 以降を background で自走させる運用を docs/skills で明文化する。
+- [x] Implementation: `AGENTS.md` / `docs/help/agent-workflow.md` / `docs/tools/codex-multi-agent.md` / `.agents/skills/review-pr/SKILL.md` / `.agents/skills/README.md` を更新する。
+- [x] Validation: docs-check と参照整合確認を実施する。
 
 ## Progress
 
@@ -17,6 +20,9 @@
 - [x] `prepare-init` に git 進行中状態 / unresolved / tracked変更 の fail-fast を追加
 - [x] review時 commit baseline と prepare時 commit set の一致確認を追加
 - [x] `docs/help/repo-governance.md` に再実行ルールを追記
+- [x] 現行記述を確認し、暗黙だった運用（完了時通知・停止条件時のみ介入）を抽出
+- [x] docs/skills へ追記
+- [x] 検証実行と review 追記
 
 ## Review
 
@@ -44,3 +50,13 @@
 - Risks / rollback:
   - リスク: review後に PR head が更新された場合、prepare は意図的に fail し、review再実行が必須になる。
   - ロールバック: `scripts/pr` の commit baseline 検証と clean start ロジックを戻し、従来の再利用フローへ復帰する。
+
+### Background PR Ops Docs
+
+- Summary: `pr_reviewer` 以降の PR工程を background terminal の直列自走として運用定義へ反映し、介入タイミングを「停止条件ヒット時」と「実マージ依頼時」に限定した。これにより、人間は Plan/仕様検討に集中しつつ、PR工程はサブエージェントに継続実行させられる。
+- Validation commands:
+  - `./scripts/ci/docs-check.sh`
+  - `rg -n "background terminal|停止条件|直列実行|pr_reviewer|pr_preparer|pr_merger" AGENTS.md docs/help/agent-workflow.md docs/tools/codex-multi-agent.md .agents/skills/review-pr/SKILL.md .agents/skills/README.md .agents/skills/PR_WORKFLOW.md -S`
+- Risks / rollback:
+  - リスク: 途中承認前提で運用しているメンバーには、通知タイミング変更（完了/停止条件のみ）の周知が必要。
+  - ロールバック: 本タスクで追加した background 直列自走と停止条件限定の記述を削除し、従来の逐次確認運用へ戻す。
