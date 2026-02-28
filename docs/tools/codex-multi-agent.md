@@ -80,13 +80,13 @@ git worktree add .worktrees/lane1 -b feat/issue-25-calendar-read origin/main
 git worktree add .worktrees/lane2 -b feat/issue-26-calendar-write-contract origin/main
 git worktree add .worktrees/lane3 -b feat/issue-27-calendar-write-exec origin/main
 
-scripts/lane-monitor init
+scripts/lane-worker init
 # edit .local/lanes.tsv
 scripts/lane-worker run-all
-scripts/lane-monitor start --interval 60
 ```
 
-tmux は必須ではない。監視だけが必要な場合は `scripts/lane-monitor` を使う。
+tmux は必須ではない。進捗確認は `scripts/lane-worker status` と
+`.local/agent-reports/` を使う。
 各 lane では `implementer_bg` に 1 Issue だけを担当させる。
 
 ## 3-Lane Smoke Test
@@ -162,54 +162,20 @@ gh auth status
 
 `scripts/pr-open` は `pre-pr` 証跡（PASS）とHEAD一致を検証するため、Issue実装を含むPRでは必須とする。
 
-## 3-Lane Background Monitor
+## 3-Lane Progress Check
 
-進捗監視だけ別プロセスで常駐させる場合は `scripts/lane-monitor` を使う。
-
-1. 設定ファイルを作成する（初回のみ）。
+`lane-worker` と report ファイルで進捗を確認する。
 
 ```bash
-scripts/lane-monitor init
+scripts/lane-worker status
+ls -1t .local/agent-reports/*.md .worktrees/*/.local/agent-reports/*.md 2>/dev/null | head -n 10
 ```
 
-2. `.local/lanes.tsv` を編集し、各レーンの `issue/pr/owner` を設定する。
-
-```text
-# lane<TAB>issue<TAB>pr<TAB>owner<TAB>note
-lane1	25	31	codex-a	calendar read path
-lane2	26	32	codex-b	calendar write contract
-lane3	27	33	codex-c	calendar write execution
-```
-
-3. バックグラウンドで監視を起動する。
+必要なら lane ごとのログも確認する。
 
 ```bash
-scripts/lane-monitor start --interval 60
+tail -n 80 .local/lane-worker/lane1.log
 ```
-
-4. 監視状態と最新スナップショットを確認する。
-
-```bash
-scripts/lane-monitor status
-```
-
-出力には次が含まれる。
-
-- `tmux`: tmux を併用した場合の lane 状態（未使用時は `NO_SESSION`）
-- `last_report`: lane ごとの最新 subagent report ファイル名
-- `age`: 最新 report からの経過時間
-
-5. 停止する。
-
-```bash
-scripts/lane-monitor stop
-```
-
-補足:
-
-- フォアグラウンド確認は `scripts/lane-monitor watch`。
-- 1回だけ取得する場合は `scripts/lane-monitor once`。
-- `gh` が未認証でも監視は動作する（Issue/PR 列は `AUTH_ERR` または `NO_GH` 表示）。
 
 ## Issue-to-PR Background Worker
 
