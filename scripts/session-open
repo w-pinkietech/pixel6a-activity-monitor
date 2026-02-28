@@ -1,0 +1,265 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  cat <<'USAGE'
+Usage:
+  scripts/session-open [--json]
+
+Description:
+  Print a startup snapshot for a new Codex session:
+  - current git state
+  - plan context
+  - GitHub auth and current branch PR/issue context
+  - docs lookup quick guide
+  - unified_exec background-first workflow checks
+USAGE
+}
+
+command_exists() {
+  command -v "$1" >/dev/null 2>&1
+}
+
+repo_root() {
+  local script_dir
+  local common_git_dir
+  script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+  if common_git_dir=$(git -C "$script_dir" rev-parse --path-format=absolute --git-common-dir 2>/dev/null); then
+    (cd "$(dirname "$common_git_dir")" && pwd)
+    return
+  fi
+
+  (cd "$script_dir/.." && pwd)
+}
+
+frontmatter_value() {
+  local file="$1"
+  local key="$2"
+  awk -v k="$key" '
+    NR == 1 && $0 == "---" { in_fm = 1; next }
+    in_fm && $0 == "---" { exit }
+    in_fm {
+      if ($0 ~ "^" k ":") {
+        sub("^" k ":[[:space:]]*", "", $0)
+        print $0
+        exit
+      }
+    }
+  ' "$file"
+}
+
+trim_text() {
+  local text="$1"
+  local max_len="$2"
+  if [ "${#text}" -le "$max_len" ]; then
+    printf '%s' "$text"
+    return
+  fi
+  printf '%s...' "${text:0:max_len-3}"
+}
+
+git_upstream() {
+  git rev-parse --abbrev-ref --symbolic-full-name '@{upstream}' 2>/dev/null || true
+}
+
+gh_mode() {
+  if ! command_exists gh; then
+    printf 'missing'
+    return
+  fi
+  if gh auth status >/dev/null 2>&1; then
+    printf 'ok'
+    return
+  fi
+  printf 'auth_err'
+}
+
+extract_issue_from_branch() {
+  local branch="$1"
+  if [[ "$branch" =~ issue-([0-9]+) ]]; then
+    printf '%s' "${BASH_REMATCH[1]}"
+  fi
+}
+
+json_escape() {
+  local value="$1"
+  value="${value//\\/\\\\}"
+  value="${value//\"/\\\"}"
+  value="${value//$'\n'/ }"
+  printf '%s' "$value"
+}
+
+json_mode="false"
+
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --json)
+      json_mode="true"
+      shift
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      echo "unknown option: $1" >&2
+      usage
+      exit 2
+      ;;
+  esac
+done
+
+root="$(repo_root)"
+cd "$root"
+
+timestamp_utc="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+branch="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || printf '-')"
+upstream="$(git_upstream)"
+if [ -n "$upstream" ]; then
+  ahead_behind="$(git rev-list --left-right --count "${upstream}...HEAD" 2>/dev/null || printf '0\t0')"
+  behind_count="${ahead_behind%%$'\t'*}"
+  ahead_count="${ahead_behind##*$'\t'}"
+else
+  ahead_count="-"
+  behind_count="-"
+fi
+
+dirty_count="$(git status --porcelain | wc -l | awk '{print $1}')"
+issue_guess="$(extract_issue_from_branch "$branch")"
+
+latest_plans="$(ls -1t docs/experiments/plans/*.md 2>/dev/null | rg -v '/(index|template)\.md$' | head -n 3 || true)"
+
+plan_rows=""
+if [ -n "$latest_plans" ]; then
+  while IFS= read -r plan; do
+    [ -z "$plan" ] && continue
+    title="$(frontmatter_value "$plan" title)"
+    status="$(frontmatter_value "$plan" status)"
+    owner="$(frontmatter_value "$plan" owner)"
+    updated="$(frontmatter_value "$plan" last_updated)"
+    [ -z "$title" ] && title="-"
+    [ -z "$status" ] && status="-"
+    [ -z "$owner" ] && owner="-"
+    [ -z "$updated" ] && updated="-"
+    row="$plan|$status|$owner|$updated|$title"
+    if [ -z "$plan_rows" ]; then
+      plan_rows="$row"
+    else
+      plan_rows="$plan_rows"$'\n'"$row"
+    fi
+  done <<EOF_PLANS
+$latest_plans
+EOF_PLANS
+fi
+
+gh_state="$(gh_mode)"
+gh_user="-"
+branch_pr="-"
+issue_title="-"
+issue_url="-"
+
+if [ "$gh_state" = "ok" ]; then
+  gh_user="$(gh api user --jq .login 2>/dev/null || printf '-')"
+  branch_pr="$(gh pr view --json number,state,isDraft,url,title --jq '"#" + (.number|tostring) + " " + .state + (if .isDraft then " (draft)" else "" end) + " " + .url' 2>/dev/null || printf '-')"
+  if [ -n "$issue_guess" ]; then
+    issue_title="$(gh issue view "$issue_guess" --json title --jq .title 2>/dev/null || printf '-')"
+    issue_url="$(gh issue view "$issue_guess" --json url --jq .url 2>/dev/null || printf '-')"
+  fi
+fi
+
+unified_exec_enabled="false"
+if rg -n '^unified_exec\s*=\s*true$' .codex/config.toml >/dev/null 2>&1; then
+  unified_exec_enabled="true"
+fi
+
+implementer_bg_defined="false"
+if rg -n '^\[agents\.implementer_bg\]$' .codex/config.toml >/dev/null 2>&1; then
+  implementer_bg_defined="true"
+fi
+
+lane_worker_ready="false"
+if [ -x scripts/lane-worker ]; then
+  lane_worker_ready="true"
+fi
+
+if [ "$json_mode" = "true" ]; then
+  printf '{\n'
+  printf '  "timestamp_utc": "%s",\n' "$(json_escape "$timestamp_utc")"
+  printf '  "git": {"branch": "%s", "upstream": "%s", "ahead": "%s", "behind": "%s", "dirty_count": "%s"},\n' \
+    "$(json_escape "$branch")" "$(json_escape "${upstream:--}")" "$(json_escape "$ahead_count")" "$(json_escape "$behind_count")" "$(json_escape "$dirty_count")"
+  printf '  "issue_guess": "%s",\n' "$(json_escape "${issue_guess:--}")"
+  printf '  "github": {"mode": "%s", "user": "%s", "branch_pr": "%s", "issue_title": "%s", "issue_url": "%s"},\n' \
+    "$(json_escape "$gh_state")" "$(json_escape "$gh_user")" "$(json_escape "$branch_pr")" "$(json_escape "$issue_title")" "$(json_escape "$issue_url")"
+  printf '  "unified_exec": {"enabled": "%s", "implementer_bg_defined": "%s", "lane_worker_ready": "%s"}\n' \
+    "$(json_escape "$unified_exec_enabled")" "$(json_escape "$implementer_bg_defined")" "$(json_escape "$lane_worker_ready")"
+  printf '}\n'
+  exit 0
+fi
+
+printf '== Codex Session Open ==\n'
+printf 'UTC: %s\n\n' "$timestamp_utc"
+
+printf '[Git]\n'
+printf 'branch: %s\n' "$branch"
+printf 'upstream: %s\n' "${upstream:--}"
+printf 'ahead/behind: +%s/-%s\n' "$ahead_count" "$behind_count"
+printf 'working tree changes: %s\n\n' "$dirty_count"
+
+printf '[Plan]\n'
+if [ -n "$issue_guess" ]; then
+  printf 'issue guess from branch: #%s\n' "$issue_guess"
+else
+  printf 'issue guess from branch: -\n'
+fi
+
+if [ -n "$plan_rows" ]; then
+  printf 'recent plans:\n'
+  while IFS='|' read -r plan_path status owner updated title; do
+    [ -z "$plan_path" ] && continue
+    printf '%s\n' "- $plan_path"
+    printf '  status=%s owner=%s updated=%s\n' "$status" "$owner" "$updated"
+    printf '  title=%s\n' "$(trim_text "$title" 96)"
+  done <<EOF_PLAN_ROWS
+$plan_rows
+EOF_PLAN_ROWS
+else
+  printf 'recent plans: none\n'
+fi
+printf '\n'
+
+printf '[GitHub]\n'
+printf 'gh auth: %s\n' "$gh_state"
+if [ "$gh_state" = "ok" ]; then
+  printf 'user: %s\n' "$gh_user"
+  printf 'current branch PR: %s\n' "$branch_pr"
+  if [ -n "$issue_guess" ]; then
+    printf 'issue #%s: %s\n' "$issue_guess" "$(trim_text "$issue_title" 96)"
+    printf 'issue url: %s\n' "$issue_url"
+  fi
+else
+  printf 'hint: gh auth status (必要なら再ログイン)\n'
+fi
+printf '\n'
+
+printf '[Docs Quick Reference]\n'
+printf '%s\n' '- docs/help/issue-plan-pr.md'
+printf '%s\n' '- docs/help/workflow-design.md'
+printf '%s\n' '- docs/help/agent-workflow.md'
+printf '%s\n' '- docs/help/preflight-check.md'
+printf '%s\n' '- docs/tools/codex-multi-agent.md'
+printf 'tips:\n'
+printf '  rg -n "keyword" docs/help docs/tools docs/reference\n'
+printf '  sed -n "1,160p" docs/help/agent-workflow.md\n\n'
+
+printf '[Unified Exec Background-First]\n'
+printf 'unified_exec enabled in .codex/config.toml: %s\n' "$unified_exec_enabled"
+printf 'implementer_bg defined: %s\n' "$implementer_bg_defined"
+printf 'scripts/lane-worker executable: %s\n' "$lane_worker_ready"
+printf 'recommended flow:\n'
+printf '  1) scripts/lane-worker status\n'
+printf '  2) scripts/lane-worker run <lane>\n'
+printf '  3) scripts/lane-monitor start --interval 60\n'
+printf '  4) scripts/pr-review <PR>\n'
+printf '  5) scripts/pr-prepare run <PR>\n'
+printf '  6) scripts/pr-merge verify <PR>\n'
