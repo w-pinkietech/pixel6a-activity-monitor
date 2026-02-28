@@ -98,6 +98,14 @@ cleanup_worktree() {
   git branch -D "pr-$pr-verify" 2>/dev/null || true
 }
 
+branch_checked_out_in_worktree() {
+  local branch="$1"
+  git worktree list --porcelain | awk -v needle="refs/heads/$branch" '
+    $1 == "branch" && $2 == needle { found=1 }
+    END { exit(found ? 0 : 1) }
+  '
+}
+
 pr_meta_json() {
   local pr="$1"
   gh pr view "$pr" --json number,title,state,isDraft,author,baseRefName,headRefName,headRefOid,headRepository,url
@@ -508,6 +516,8 @@ cmd_merge_run() {
   local pr
   pr="$(normalize_pr "$1")"
   local execute=0
+  local merge_delete_branch=1
+  local merge_rc=0
   if [ "${2:-}" = "--execute" ]; then
     execute=1
   fi
@@ -515,6 +525,9 @@ cmd_merge_run() {
   cmd_merge_verify "$pr"
   # shellcheck disable=SC1091
   source .local/prep.env
+  require_artifact .local/pr-meta.env
+  # shellcheck disable=SC1091
+  source .local/pr-meta.env
 
   if [ "$execute" -ne 1 ]; then
     echo "dry-run: would run 'gh pr merge $pr --squash --delete-branch --match-head-commit $PREP_HEAD_SHA'"
@@ -522,13 +535,37 @@ cmd_merge_run() {
     return 0
   fi
 
-  gh pr merge "$pr" --squash --delete-branch --match-head-commit "$PREP_HEAD_SHA"
+  if [ -n "${PR_HEAD_REF:-}" ] && branch_checked_out_in_worktree "$PR_HEAD_REF"; then
+    merge_delete_branch=0
+    echo "skip --delete-branch: local branch '$PR_HEAD_REF' is used by a worktree"
+  fi
+
+  if [ "$merge_delete_branch" -eq 1 ]; then
+    if gh pr merge "$pr" --squash --delete-branch --match-head-commit "$PREP_HEAD_SHA"; then
+      merge_rc=0
+    else
+      merge_rc=$?
+    fi
+  else
+    if gh pr merge "$pr" --squash --match-head-commit "$PREP_HEAD_SHA"; then
+      merge_rc=0
+    else
+      merge_rc=$?
+    fi
+  fi
 
   local state
   state="$(gh pr view "$pr" --json state --jq .state)"
   if [ "$state" != "MERGED" ]; then
+    if [ "$merge_rc" -ne 0 ]; then
+      echo "gh pr merge failed (exit=$merge_rc)"
+    fi
     echo "merge requested but PR state is $state"
     exit 1
+  fi
+
+  if [ "$merge_rc" -ne 0 ]; then
+    echo "gh pr merge exited with $merge_rc but PR is MERGED; continue cleanup"
   fi
 
   cleanup_worktree "$pr"
