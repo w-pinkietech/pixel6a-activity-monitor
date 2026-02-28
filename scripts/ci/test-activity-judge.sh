@@ -12,6 +12,7 @@ trap cleanup EXIT
 
 data_path="${tmp_dir}/location.jsonl"
 output_path="${tmp_dir}/judge.json"
+args_path="${tmp_dir}/gog-args.log"
 mock_bin="${tmp_dir}/bin"
 mkdir -p "${mock_bin}"
 
@@ -24,6 +25,9 @@ EOF
 cat > "${mock_bin}/gog" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
+if [ -n "${MOCK_GOG_ARGS_PATH:-}" ]; then
+  printf '%s\n' "$*" > "${MOCK_GOG_ARGS_PATH}"
+fi
 if [ "${MOCK_GOG_MODE:-success}" = "fail" ]; then
   echo "mock calendar API error" >&2
   exit 1
@@ -59,6 +63,7 @@ P6AM_GOG_BIN="gog" \
 P6AM_CALENDAR_ID="demo-calendar" \
 P6AM_CALENDAR_TZ="Asia/Tokyo" \
 P6AM_CALENDAR_MAX_EVENTS="10" \
+MOCK_GOG_ARGS_PATH="${args_path}" \
 "${script_path}" >/dev/null
 
 if ! grep -q '"movement_level":"high"' "${output_path}"; then
@@ -85,6 +90,14 @@ if [ "$(jq -r '.event_context | fromjson | .top_events[0] | has("start_at") and 
   echo "expected fixed top_events schema" >&2
   exit 1
 fi
+if ! grep -q -- '--time-min 2026-02-20T15:00:00Z' "${args_path}"; then
+  echo "expected JST day start converted to UTC time-min" >&2
+  exit 1
+fi
+if ! grep -q -- '--time-max 2026-02-21T14:59:59Z' "${args_path}"; then
+  echo "expected JST day end converted to UTC time-max" >&2
+  exit 1
+fi
 
 first_output="$(cat "${output_path}")"
 P6AM_DATA_PATH="${data_path}" \
@@ -98,6 +111,7 @@ P6AM_GOG_BIN="gog" \
 P6AM_CALENDAR_ID="demo-calendar" \
 P6AM_CALENDAR_TZ="Asia/Tokyo" \
 P6AM_CALENDAR_MAX_EVENTS="10" \
+MOCK_GOG_ARGS_PATH="${args_path}" \
 "${script_path}" >/dev/null
 second_output="$(cat "${output_path}")"
 if [ "${first_output}" != "${second_output}" ]; then
@@ -116,6 +130,7 @@ P6AM_GOG_BIN="gog" \
 P6AM_CALENDAR_ID="demo-calendar" \
 P6AM_CALENDAR_TZ="Asia/Tokyo" \
 P6AM_CALENDAR_MAX_EVENTS="10" \
+MOCK_GOG_ARGS_PATH="${args_path}" \
 "${script_path}" >/dev/null
 if ! grep -q '"movement_level":"low"' "${output_path}"; then
   echo "expected low movement level with high thresholds" >&2
@@ -134,6 +149,7 @@ P6AM_GOG_BIN="gog" \
 P6AM_CALENDAR_ID="invalid-calendar" \
 P6AM_CALENDAR_TZ="Asia/Tokyo" \
 P6AM_CALENDAR_MAX_EVENTS="10" \
+MOCK_GOG_ARGS_PATH="${args_path}" \
 "${script_path}" >/dev/null
 if [ "$(jq -r '.movement_level' "${output_path}")" != "high" ]; then
   echo "judge should continue on calendar fetch failure" >&2

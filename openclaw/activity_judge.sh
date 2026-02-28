@@ -138,54 +138,64 @@ else
     if [ -z "$today_local" ]; then
       echo "calendar context fallback: reason=invalid_calendar_timezone timezone=${calendar_tz}" >&2
     else
-      calendar_window_start_utc="$(
-        TZ="$calendar_tz" date -u -d "${today_local} 00:00:00" +%Y-%m-%dT%H:%M:%SZ
+      calendar_window_start_epoch="$(
+        TZ="$calendar_tz" date -d "${today_local} 00:00:00" +%s 2>/dev/null || true
       )"
-      calendar_window_end_utc="$(
-        TZ="$calendar_tz" date -u -d "${today_local} 23:59:59" +%Y-%m-%dT%H:%M:%SZ
+      calendar_window_end_epoch="$(
+        TZ="$calendar_tz" date -d "${today_local} 23:59:59" +%s 2>/dev/null || true
       )"
-      calendar_err="$(mktemp)"
-      if calendar_raw="$(
-        "$gog_bin" calendar events list "$calendar_id" \
-          --time-min "$calendar_window_start_utc" \
-          --time-max "$calendar_window_end_utc" \
-          --limit "$calendar_max_events" \
-          --json \
-          2>"$calendar_err"
-      )"; then
-        top_events="$(
-          printf '%s' "$calendar_raw" | jq -c --argjson max "$calendar_max_events" '
-            def normalize_time($value):
-              if ($value | type) == "object" then
-                ($value.dateTime // $value.date // "")
-              else
-                ""
-              end;
-            (if type == "array" then . else (.items // .events // []) end)
-            | map({
-                start_at: normalize_time(.start),
-                end_at: normalize_time(.end),
-                summary: (.summary // "")
-              })
-            | map(select(.start_at != "" and .end_at != ""))
-            | .[:$max]
-          ' 2>/dev/null || true
-        )"
-        if [ -n "$top_events" ]; then
-          event_context="$(
-            jq -cn --argjson top_events "$top_events" --arg timezone "$calendar_tz" \
-              '{event_count: ($top_events | length), top_events: $top_events, timezone: $timezone}'
-          )"
-          calendar_event_count="$(printf '%s' "$event_context" | jq -r '.event_count')"
-          echo "calendar context loaded: count=${calendar_event_count} timezone=${calendar_tz} window=${calendar_window_start_utc}..${calendar_window_end_utc}"
-        else
-          echo "calendar context fallback: reason=invalid_calendar_payload timezone=${calendar_tz}" >&2
-        fi
+      if [ -z "$calendar_window_start_epoch" ] || [ -z "$calendar_window_end_epoch" ]; then
+        echo "calendar context fallback: reason=calendar_window_build_failed timezone=${calendar_tz}" >&2
       else
-        calendar_error_detail="$(cat "$calendar_err")"
-        echo "calendar context fallback: reason=calendar_fetch_failed calendar_id=${calendar_id} timezone=${calendar_tz} detail=${calendar_error_detail}" >&2
+        calendar_window_start_utc="$(
+          date -u -d "@${calendar_window_start_epoch}" +%Y-%m-%dT%H:%M:%SZ
+        )"
+        calendar_window_end_utc="$(
+          date -u -d "@${calendar_window_end_epoch}" +%Y-%m-%dT%H:%M:%SZ
+        )"
+        calendar_err="$(mktemp)"
+        if calendar_raw="$(
+          "$gog_bin" calendar events list "$calendar_id" \
+            --time-min "$calendar_window_start_utc" \
+            --time-max "$calendar_window_end_utc" \
+            --limit "$calendar_max_events" \
+            --json \
+            2>"$calendar_err"
+        )"; then
+          top_events="$(
+            printf '%s' "$calendar_raw" | jq -c --argjson max "$calendar_max_events" '
+              def normalize_time($value):
+                if ($value | type) == "object" then
+                  ($value.dateTime // $value.date // "")
+                else
+                  ""
+                end;
+              (if type == "array" then . else (.items // .events // []) end)
+              | map({
+                  start_at: normalize_time(.start),
+                  end_at: normalize_time(.end),
+                  summary: (.summary // "")
+                })
+              | map(select(.start_at != "" and .end_at != ""))
+              | .[:$max]
+            ' 2>/dev/null || true
+          )"
+          if [ -n "$top_events" ]; then
+            event_context="$(
+              jq -cn --argjson top_events "$top_events" --arg timezone "$calendar_tz" \
+                '{event_count: ($top_events | length), top_events: $top_events, timezone: $timezone}'
+            )"
+            calendar_event_count="$(printf '%s' "$event_context" | jq -r '.event_count')"
+            echo "calendar context loaded: count=${calendar_event_count} timezone=${calendar_tz} window=${calendar_window_start_utc}..${calendar_window_end_utc}"
+          else
+            echo "calendar context fallback: reason=invalid_calendar_payload timezone=${calendar_tz}" >&2
+          fi
+        else
+          calendar_error_detail="$(cat "$calendar_err")"
+          echo "calendar context fallback: reason=calendar_fetch_failed calendar_id=${calendar_id} timezone=${calendar_tz} detail=${calendar_error_detail}" >&2
+        fi
+        rm -f "$calendar_err"
       fi
-      rm -f "$calendar_err"
     fi
   fi
 fi
