@@ -37,6 +37,42 @@ Sheets へは次の13列を保存する。
 - 失敗時は指数バックオフでリトライ
 - 重複防止のため `timestamp_utc + device_id` で一意性を確認
 
+## Data Target Provisioning
+
+実装ファイル: `openclaw/provision_data_target.sh`
+
+- Drive フォルダを検索し、未作成なら作成する（再実行安全）。
+- Spreadsheet を検索し、未作成なら `raw` と `conversation_log` tab を作成する。
+- `raw!A1:M1` と `conversation_log!A1:H1` のヘッダーを初期化する。
+- 結果を `P6AM_PROVISION_OUTPUT_PATH`（default: `tmp/provision-data-target.env`）へ出力する。
+
+```bash
+P6AM_GOG_BIN=gog \
+P6AM_GOG_ACCOUNT=you@example.com \
+P6AM_DRIVE_PARENT_ID=root-folder-id \
+P6AM_DRIVE_FOLDER_NAME=pixel6a-activity-monitor \
+P6AM_SHEETS_TITLE=pixel6a-activity-monitor-raw \
+./openclaw/provision_data_target.sh
+```
+
+出力例（`tmp/provision-data-target.env`）:
+
+```bash
+P6AM_DRIVE_FOLDER_ID=...
+P6AM_DRIVE_FOLDER_NAME=pixel6a-activity-monitor
+P6AM_SHEETS_ID=...
+P6AM_SHEETS_TITLE=pixel6a-activity-monitor-raw
+P6AM_SHEETS_RANGE=raw\!A:M
+P6AM_CONVERSATION_RANGE=conversation_log\!A:H
+```
+
+ヘッダー確認:
+
+```bash
+gog -a you@example.com sheets get "$P6AM_SHEETS_ID" 'raw!A1:M1'
+gog -a you@example.com sheets get "$P6AM_SHEETS_ID" 'conversation_log!A1:H1'
+```
+
 ## Implementation (MVP)
 
 実装ファイル: `openclaw/sheets_append.sh`

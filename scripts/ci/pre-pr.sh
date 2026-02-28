@@ -61,6 +61,9 @@ echo "Running sheets append test"
 echo "Running collect sheets job test"
 ./scripts/ci/test-collect-sheets-job.sh
 
+echo "Running provision data target test"
+./scripts/ci/test-provision-data-target.sh
+
 echo "Running activity judge test"
 ./scripts/ci/test-activity-judge.sh
 

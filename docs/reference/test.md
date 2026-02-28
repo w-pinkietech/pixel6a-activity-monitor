@@ -17,6 +17,7 @@ Page type: reference
 - SSH collectorジョブテスト: `./scripts/ci/test-ssh-collector-job.sh`
 - Sheets追記テスト: `./scripts/ci/test-sheets-append.sh`
 - collect + Sheetsジョブテスト: `./scripts/ci/test-collect-sheets-job.sh`
+- データ保存先プロビジョニングテスト: `./scripts/ci/test-provision-data-target.sh`
 - 活動判定テスト: `./scripts/ci/test-activity-judge.sh`
 - 運用ランタイムテスト: `./scripts/ci/test-ops-runtime.sh`
 - PR前ゲート: `./scripts/ci/pre-pr.sh`
