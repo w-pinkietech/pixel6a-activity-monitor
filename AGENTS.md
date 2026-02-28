@@ -14,6 +14,7 @@
 - `docs/`: ドキュメント
 - `data/`: ローカルデータ（原則 Git 管理外）
 - `tmp/`: 一時ファイル
+- `tasks/`: タスク計画と lessons 記録
 - `termux/` (予定): 端末側収集スクリプト
 - `openclaw/` (予定): 判定・通知ジョブ
 - `.codex/`: Codex multi-agent 設定
@@ -23,6 +24,7 @@
 ## Source of Truth
 
 - 開発フローの基準: `docs/help/issue-plan-pr.md`
+- ワークフロー設計/タスク管理: `docs/help/workflow-design.md`
 - subagent運用: `docs/help/agent-workflow.md`
 - 並列実装ルール: `docs/help/parallel-implementation.md`
 - GitHub運用ルール: `docs/help/repo-governance.md`
@@ -52,6 +54,65 @@
 - PR には Issue/Plan/検証/リスク/ロールバックを必ず記載する。
 - 完了判定は `docs/reference/dod.md` を基準にする。
 
+## Workflow Design
+
+### 1. Planモードを基本とする
+
+- 3ステップ以上、またはアーキテクチャに関わるタスクは Plan モードで開始する。
+- 途中で行き詰まったら、無理に進めず立ち止まって再計画する。
+- 実装だけでなく検証ステップにも Plan モードを使う。
+- 実装前に仕様を明文化し、曖昧さを減らす。
+
+### 2. サブエージェント戦略
+
+- メインコンテキストをクリーンに保つため、サブエージェントを積極活用する。
+- リサーチ・調査・並列分析はサブエージェントに委譲する。
+- 複雑な課題はサブエージェントを使って計算リソースを増やす。
+- 1サブエージェントにつき1タスクを割り当てる。
+
+### 3. 自己改善ループ
+
+- ユーザーから修正を受けたら、再発防止パターンを `tasks/lessons.md` に記録する。
+- 同じミスを繰り返さないよう、行動ルールとして明文化する。
+- ミス率が下がるまでルールを継続的に改善する。
+- セッション開始時に、そのプロジェクトに関係する lessons を確認する。
+
+### 4. 完了前に必ず検証する
+
+- 動作を証明できるまでタスクを完了扱いにしない。
+- 必要に応じて `main` と変更差分を確認する。
+- 「スタッフエンジニアが承認できるか」を基準に自己レビューする。
+- テスト実行とログ確認で正しさを示す。
+
+### 5. エレガントさを追求する（バランス重視）
+
+- 重要変更の前に「よりエレガントな方法がないか」を一度検討する。
+- ハック的修正と判断した場合は、前提を更新してより良い解決策を選び直す。
+- シンプルで明白な修正では過剰設計を避ける。
+- 提示前に自己レビューし、説明責任を持てる状態にする。
+
+### 6. 自律的なバグ修正
+
+- バグ報告を受けたら、追加指示を待たずに原因調査と修正を進める。
+- ログ・エラー・失敗テストを起点に自律的に解決する。
+- ユーザーのコンテキスト切り替えコストを最小化する。
+- 指示がなくても、失敗している CI テストの修正候補を確認する。
+
+## Task Management
+
+1. まず `tasks/todo.md` にチェック可能な計画を書く。
+2. 実装前に計画内容を確認する。
+3. 進捗に応じて完了項目を随時更新する。
+4. 各ステップで高レベルの変更サマリーを残す。
+5. 完了時に `tasks/todo.md` に review セクションを追記する。
+6. 修正を受けた後は `tasks/lessons.md` を更新する。
+
+## Core Principles
+
+- **シンプル第一**: 変更はできる限り単純にし、影響範囲を最小化する。
+- **手を抜かない**: 根本原因を特定し、一時しのぎを避ける。
+- **影響を最小化する**: 必要箇所だけを変更し、新規不具合を持ち込まない。
+
 ## Agent Responsibility Matrix
 
 | Stage | Subagent | Skill | Expected Output |
@@ -59,14 +120,25 @@
 | 調査 | `explorer` | n/a | 影響範囲と制約の整理 |
 | 計画 | `planner` | `planner` | `docs/experiments/plans/*` |
 | Issue分割 | `issue_planner` | `issue-planning` | 実装単位Issue |
-| 実装 | `implementer` | `issue-implementation` | 実装差分と検証結果 |
+| 実装（背景） | `implementer_bg` | `issue-implementation` | Issue実装〜PR作成までの自動実行結果 |
+| 実装（対話） | `implementer` | `issue-implementation` | ユーザー対話ベースの実装差分と検証結果 |
 | PRレビュー | `pr_reviewer` | `review-pr` | `.local/review.md/.json` |
 | PR準備 | `pr_preparer` | `prepare-pr` | `.local/prep.md` と gate pass |
 | マージ判定 | `pr_merger` | `merge-pr` | merge可否の判断 |
 
+## Background-First Agent Policy
+
+- 標準運用は `implementer_bg` を使い、`scripts/lane-worker` で Issue 実装から PR 作成までを background 実行する。
+- `lane-worker` は `codex exec --enable unified_exec` を前提に動かす。
+- `implementer` は、仕様確認やスコープ調整などユーザーとの直接対話が必要な場合のみ使う。
+- `scripts/pr-review` / `scripts/pr-prepare run` / `scripts/pr-merge verify` は background terminal で実行してよい。
+- 実マージ（`scripts/pr-merge run <PR> --execute`）は明示依頼がある場合のみ実行する。
+
 ## Main/Subagent Reporting Contract
 
 - main agent は orchestration と最終サマリを担当する。
+- main agent の最終報告には `Implemented Features` セクションを必ず含める。
+- `Implemented Features` には「今回実装した機能」をユーザー視点で列挙する（該当なしの場合は `none` と明記）。
 - subagent は完了時に報告Markdownを作成し、main agent へパスを共有する。
 - 報告ファイルの保存先: `.local/agent-reports/`
 - 命名規則: `<UTC timestamp>-<agent>-<scope>.md`
@@ -75,6 +147,7 @@
 報告Markdownの必須項目:
 
 - Task / Scope
+- Implemented Features
 - What changed
 - Validation
 - Risks / Follow-ups

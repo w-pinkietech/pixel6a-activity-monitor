@@ -22,14 +22,17 @@ Page type: how-to
 1. `explorer`: 調査と影響範囲の把握
 2. `planner`: `docs/experiments/plans/` に実装計画を作成
 3. `issue_planner`: plan を実装単位のIssueへ分割
-4. `implementer`: 1 Issue を実装しローカル検証
+4. `implementer_bg`: `scripts/lane-worker` で 1 Issue を背景実装し PR 作成まで完了
 5. `pr_reviewer`: PRの問題点を抽出し `.local/review.*` を更新
 6. `pr_preparer`: 指摘対応と `pre-pr` ゲート実行
 7. `pr_merger`: 最終検証とマージ判定
 
+対話が必要な場合のみ `implementer` を使う（仕様確認・スコープ調整・方針相談など）。
+
 ## Command Mapping
 
 ```bash
+scripts/lane-worker run <lane>
 scripts/pr-review <PR>
 scripts/pr-prepare run <PR>
 scripts/pr-merge verify <PR>
@@ -40,10 +43,17 @@ scripts/pr-merge verify <PR>
 main agent は計画・実装・検証の要点を統合して最終報告を行う。  
 そのために subagent は完了時に報告Markdownを必ず作成する。
 
+main agent の最終報告フォーマット:
+
+- `Implemented Features` を必須セクションにする。
+- 「今回実装した機能」をユーザー視点で列挙する。
+- 実装がない場合は `none` を明記する。
+
 - 保存先: `.local/agent-reports/`
 - 命名: `<UTC timestamp>-<agent>-<scope>.md`
 - 必須セクション:
   - `Task / Scope`
+  - `Implemented Features`
   - `What changed`
   - `Validation`
   - `Risks / Follow-ups`
@@ -52,7 +62,7 @@ main agent は計画・実装・検証の要点を統合して最終報告を行
 推奨: 作業開始時にテンプレートを生成する。
 
 ```bash
-scripts/agent-report implementer issue-25 --task "Google Calendar read path"
+scripts/agent-report implementer_bg issue-25 --task "Google Calendar read path"
 ```
 
 main agent は各 subagent の報告を集約して、Issue/PR の最終コメントやhandoffに反映する。
@@ -82,5 +92,6 @@ Issue実装を含むPRは、実行テスト完了前に作成しない。
 
 ## Related
 
+- [Workflow Design](/help/workflow-design)
 - [Parallel Implementation](/help/parallel-implementation)
 - [Issue, Plan, PR Flow](/help/issue-plan-pr)

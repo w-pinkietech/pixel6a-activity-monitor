@@ -56,8 +56,9 @@ codex features list | rg '^multi_agent'
 3. 設計が必要な場合は `planner` でPlanを作る。
 4. Planから実行単位を切るときは `issue_planner` を使う（対応skillは `issue-planning`）。
 5. 調査が必要な場合は `explorer` を使う。
-6. 実装は `implementer` で進める。
-7. PR作業は `pr_reviewer` -> `pr_preparer` -> `pr_merger` の順で実行する。
+6. 実装〜PR作成は `scripts/lane-worker` から `implementer_bg` を使って background 実行する。
+7. 仕様確認など対話が必要な場合のみ `implementer` を使う。
+8. PR作業は `pr_reviewer` -> `pr_preparer` -> `pr_merger` の順で実行する。
 
 ## Recommended Topology (3 lanes)
 
@@ -66,7 +67,7 @@ codex features list | rg '^multi_agent'
 - 1 lane = 1 Issue
 - 1 lane = 1 branch
 - 1 lane = 1 worktree
-- 1 lane = 1 Codex CLI セッション
+- 1 lane = 1 background worker process (`scripts/lane-worker run <lane>`)
 
 並列上限は 3 lanes（Issue 3本）を維持する。
 
@@ -79,13 +80,14 @@ git worktree add .worktrees/lane1 -b feat/issue-25-calendar-read origin/main
 git worktree add .worktrees/lane2 -b feat/issue-26-calendar-write-contract origin/main
 git worktree add .worktrees/lane3 -b feat/issue-27-calendar-write-exec origin/main
 
-tmux new-session -d -s codex-lanes -n lane1 "cd /home/wataken/pixel6a-activity-monitor/.worktrees/lane1 && codex"
-tmux new-window -t codex-lanes -n lane2 "cd /home/wataken/pixel6a-activity-monitor/.worktrees/lane2 && codex"
-tmux new-window -t codex-lanes -n lane3 "cd /home/wataken/pixel6a-activity-monitor/.worktrees/lane3 && codex"
-tmux attach -t codex-lanes
+scripts/lane-monitor init
+# edit .local/lanes.tsv
+scripts/lane-worker run-all
+scripts/lane-monitor start --interval 60
 ```
 
-各 lane では `implementer` に 1 Issue だけを担当させる。
+tmux は必須ではない。監視だけが必要な場合は `scripts/lane-monitor` を使う。
+各 lane では `implementer_bg` に 1 Issue だけを担当させる。
 
 ## 3-Lane Smoke Test
 
@@ -103,7 +105,8 @@ tmux attach -t codex-lanes
 - Plan作成: `planner` (`docs/experiments/plans/*.md`)
 - Issue分割: `issue_planner` + `issue-planning` (Plan -> Issue unit)
 - 調査: `explorer` (read-only)
-- 実装: `implementer` + `issue-implementation` (one issue scope)
+- 実装(標準): `implementer_bg` + `issue-implementation` (`scripts/lane-worker` で issue -> PR)
+- 実装(例外): `implementer` + `issue-implementation` (ユーザーとの直接対話が必要な場合)
 - レビュー: `pr_reviewer` (`scripts/pr-review <PR>`)
 - 修正とGate: `pr_preparer` (`scripts/pr-prepare run <PR>`)
 - 最終確認/マージ: `pr_merger` (`scripts/pr-merge verify|run <PR>`)
@@ -122,7 +125,7 @@ subagent は完了時に `.local/agent-reports/` へ報告Markdownを作成し�
 報告雛形の生成:
 
 ```bash
-scripts/agent-report implementer issue-25 --task "Google Calendar read path"
+scripts/agent-report implementer_bg issue-25 --task "Google Calendar read path"
 ```
 
 ## Notes
@@ -161,8 +164,7 @@ gh auth status
 
 ## 3-Lane Background Monitor
 
-Codex CLI セッション自体は独立で動かし、進捗監視だけ別プロセスで常駐させる場合は
-`scripts/lane-monitor` を使う。
+進捗監視だけ別プロセスで常駐させる場合は `scripts/lane-monitor` を使う。
 
 1. 設定ファイルを作成する（初回のみ）。
 
@@ -193,7 +195,7 @@ scripts/lane-monitor status
 
 出力には次が含まれる。
 
-- `tmux`: `codex-lanes` セッション内の lane 状態（`CODEX` / `RUN:<cmd>` / `DEAD` / `NO_SESSION` など）
+- `tmux`: tmux を併用した場合の lane 状態（未使用時は `NO_SESSION`）
 - `last_report`: lane ごとの最新 subagent report ファイル名
 - `age`: 最新 report からの経過時間
 
@@ -254,7 +256,6 @@ scripts/lane-worker stop lane1
 PR マージ後は lane を閉じる。
 
 ```bash
-tmux kill-window -t codex-lanes:lane1
 git worktree remove .worktrees/lane1
 git branch -D feat/issue-25-calendar-read
 ```

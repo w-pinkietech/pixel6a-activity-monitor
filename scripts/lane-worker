@@ -299,7 +299,7 @@ Required workflow:
    - ./scripts/ci/pre-pr.sh
    - ./scripts/ci/pre-pr-report.sh
 4. Generate a subagent report and fill all required sections:
-   - scripts/agent-report implementer issue-${issue} --task "${task_text}"
+   - scripts/agent-report implementer_bg issue-${issue} --task "${task_text}"
 5. Commit changes with a concise message.
 6. Push branch ${branch} to origin.
 7. Create or update a PR for this branch targeting main. PR body must include:
