@@ -25,6 +25,8 @@ Page type: how-to
 - 途中で行き詰まったら、無理に進めず立ち止まって再計画する。
 - 実装だけでなく検証ステップにも Plan モードを使う。
 - 実装前に仕様を明文化し、曖昧さを減らす。
+- Plan は「実行契約」として扱い、少なくとも `Decision Log` / `Autonomy Contract` / `Verification Matrix` を含める。
+- Plan合意後は、`Autonomy Contract` の停止条件に当たる場合を除いて AI が PR 作成まで進める。
 
 ### 2. サブエージェント戦略
 
@@ -60,6 +62,12 @@ Page type: how-to
 - ログ・エラー・失敗テストを起点に自律的に解決する。
 - ユーザーのコンテキスト切り替えコストを最小化する。
 - 指示がなくても、失敗している CI テストの修正候補を確認する。
+
+### 7. 例外時のみ人間介入
+
+- 人間確認が必要なタイミングは `Autonomy Contract` の停止条件に限定する。
+- 停止時は「blocker / needed decision / options / recommendation」をまとめて報告する。
+- 停止条件に該当しない場合は、実装・検証・PR作成まで自走してから結果を報告する。
 
 ## Task Management
 
