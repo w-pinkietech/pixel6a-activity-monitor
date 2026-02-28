@@ -1,0 +1,4 @@
+interface:
+  display_name: "Session Open"
+  short_description: "Run startup checks and summarize issue/plan/pr context"
+  default_prompt: "Use $session-open to run scripts/session-open, scripts/lane-worker status, and scripts/lane-monitor status, then summarize context and next actions."

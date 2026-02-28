@@ -7,6 +7,7 @@
 - `planner`: write implementation plans under `docs/experiments/plans/`
 - `issue-planning`: split a plan into scoped implementable issues
 - `issue-implementation`: implement one scoped issue and run local checks
+- `session-open`: session開始時の状況確認（scripts/lane status を含む）
 
 See `PR_WORKFLOW.md` for execution order and rules.
 
@@ -36,3 +37,4 @@ See `PR_WORKFLOW.md` for execution order and rules.
 - `planner/agents/openai.yaml`
 - `issue-planning/agents/openai.yaml`
 - `issue-implementation/agents/openai.yaml`
+- `session-open/agents/openai.yaml`
