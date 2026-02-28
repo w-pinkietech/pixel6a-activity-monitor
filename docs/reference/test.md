@@ -19,7 +19,7 @@ Page type: reference
 - collect + Sheetsジョブテスト: `./scripts/ci/test-collect-sheets-job.sh`
 - データ保存先プロビジョニングテスト: `./scripts/ci/test-provision-data-target.sh`
 - OpenClaw cron 登録テスト: `./scripts/ci/test-openclaw-cron-register.sh`
-- 活動判定テスト: `./scripts/ci/test-activity-judge.sh`
+- 活動判定テスト: `./scripts/ci/test-activity-judge.sh`（距離判定 + Calendar event_context contract + fallback）
 - 運用ランタイムテスト: `./scripts/ci/test-ops-runtime.sh`
 - PR前ゲート: `./scripts/ci/pre-pr.sh`
 - PR前レポート: `./scripts/ci/pre-pr-report.sh`

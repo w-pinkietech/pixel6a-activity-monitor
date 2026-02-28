@@ -43,6 +43,9 @@ title: "OpenClaw Notification Contract"
   - `distance_m` (number)
   - `movement_level` (`low|medium|high`)
   - `event_count` (number)
+  - `event_context` (JSON string)
+    - fixed shape: `{"event_count":N,"top_events":[{"start_at":"...","end_at":"...","summary":"..."}],"timezone":"Asia/Tokyo"}`
+    - 保存先 contract: `habit_daily_status.event_context`
 
 ## Human Message Contract
 
@@ -52,6 +55,7 @@ title: "OpenClaw Notification Contract"
 - 活動レベル: `movement_level`
 - 移動距離: `distance_m`
 - 観測件数: `event_count`
+- Calendar文脈: `event_context`（`top_events` は最大10件）
 
 ### Message template (plain text)
 

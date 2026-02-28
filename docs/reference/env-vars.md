@@ -51,6 +51,12 @@ Page type: reference
 - `P6AM_CONVERSATION_RANGE` (default: `conversation_log!A:H`)
 - `P6AM_PROVISION_OUTPUT_PATH` (default: `tmp/provision-data-target.env`)
 
+## Google Calendar
+
+- `P6AM_CALENDAR_ID` (例: `primary` または共有カレンダーID)
+- `P6AM_CALENDAR_TZ` (default: `Asia/Tokyo`, 参照日の評価に使用)
+- `P6AM_CALENDAR_MAX_EVENTS` (default: `10`, 上限 `10` として扱う)
+
 ## OpenClaw/Cron
 
 - `OPENCLAW_GATEWAY_URL`

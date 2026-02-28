@@ -39,6 +39,10 @@ git status --short
   - `max_retries_exceeded`: `P6AM_COLLECT_TIMEOUT_SEC` の延長、または `P6AM_LOCATION_REQUEST=last` の設定を確認する
 - Sheets追記が失敗する: 認証情報とAPIレスポンスを確認
 - 通知が来ない: cron実行ログとOpenClaw通知ワークフローログを確認
+- 判定は成功するが Calendar 文脈が空になる:
+  - `calendar context fallback: ...` ログの reason を確認する
+  - `P6AM_CALENDAR_ID`, `P6AM_CALENDAR_TZ`, `gog` 認証状態を確認する
+  - `jq -r '.event_context | fromjson' tmp/activity-latest.json` で保存値を確認する
 - Tailnet疎通が失敗する: 次を順番に確認
   - サーバー側: `tailscale status` と `tailscale ping "$P6AM_TAILNET_TARGET"`
   - スマホ側: 電源ONか、機内モードOFFか、Tailscale接続中か
