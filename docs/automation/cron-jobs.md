@@ -51,6 +51,36 @@ P6AM_TAILNET_TARGET=google-pixel-6a ./openclaw/judge_notify_job.sh
 - `P6AM_TERMUX_TAILNET_TARGET` / `P6AM_TAILNET_TARGET` は `tailscale status` に表示される実ノード名またはIPに合わせる。
 - `P6AM_SHEETS_ID` / `P6AM_SHEETS_RANGE` は事前に設定する（認証は `GOOGLE_APPLICATION_CREDENTIALS` を利用）。
 
+## OpenClaw Cron Registration as Code
+
+`collect-sheets` / `judge-notify` の登録・更新は手書きせず、次のスクリプトで管理する。
+
+```bash
+P6AM_OPENCLAW_GATEWAY_URL=ws://127.0.0.1:18791 \
+P6AM_OPENCLAW_GATEWAY_TOKEN=your-token \
+P6AM_TERMUX_SSH_HOST=termux \
+P6AM_TERMUX_SSH_USER=u0_a569 \
+P6AM_TERMUX_TAILNET_TARGET=google-pixel-6a \
+P6AM_SHEETS_ID=sheet-id \
+P6AM_SHEETS_RANGE='raw!A:M' \
+P6AM_LOCATION_REQUEST=last \
+P6AM_TAILNET_TARGET=google-pixel-6a \
+./openclaw/register_cron_jobs.sh
+```
+
+確認:
+
+```bash
+openclaw cron list --all --json \
+  --url ws://127.0.0.1:18791 \
+  --token your-token
+```
+
+補足:
+- 再実行時は同名ジョブを重複作成せず、`cron edit` で更新する。
+- `--collect-cron` / `--judge-cron` でスケジュールを上書きできる。
+- job message はスクリプト内テンプレートで生成され、手書きの構文ミスを防ぐ。
+
 ## crontab Example
 
 ```cron

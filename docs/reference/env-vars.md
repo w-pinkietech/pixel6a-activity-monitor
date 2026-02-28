@@ -55,6 +55,16 @@ Page type: reference
 
 - `OPENCLAW_GATEWAY_URL`
 - `OPENCLAW_GATEWAY_TOKEN`
+- `P6AM_OPENCLAW_BIN` (default: `openclaw`)
+- `P6AM_OPENCLAW_GATEWAY_URL` (default: `ws://127.0.0.1:18791`)
+- `P6AM_OPENCLAW_GATEWAY_TOKEN` (任意: `OPENCLAW_GATEWAY_TOKEN` より優先)
+- `P6AM_OPENCLAW_COLLECT_CRON` (default: `* * * * *`)
+- `P6AM_OPENCLAW_JUDGE_CRON` (default: `0 * * * *`)
+- `P6AM_OPENCLAW_CRON_TZ` (default: `P6AM_TZ` or `Asia/Tokyo`)
+- `P6AM_OPENCLAW_COLLECT_JOB_NAME` (default: `collect-sheets`)
+- `P6AM_OPENCLAW_JUDGE_JOB_NAME` (default: `judge-notify`)
+- `P6AM_OPENCLAW_CRON_ENABLED` (default: `true`)
+- `P6AM_OPENCLAW_CRON_SHELL_PREFIX` (任意: cron message 内でコマンド前に実行する前処理)
 - `P6AM_TAILNET_CHECK_CMD` (例: `openclaw/tailnet_precheck.sh`)
 - `P6AM_JUDGE_CMD` (例: `openclaw/activity_judge.sh`)
 - `P6AM_NOTIFY_CMD` (未設定時はOpenClaw側で通知運用する)
