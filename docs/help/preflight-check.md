@@ -26,11 +26,13 @@ gh auth status
 ```
 
 - `gh issue create` / `gh issue comment` / `gh pr *` などのネットワーク必須操作は、Codex 実行時に sandbox 制約で失敗する場合がある。
-- 失敗時は「ネットワーク許可ありの再実行（escalated 実行）」でやり直す。
+- 失敗時は実行コンテキストを切り分け、ネットワーク到達可能な環境で再実行する。
 
 ## Before opening PR
 
 - `git diff` を確認
+- `./scripts/ci/pre-pr.sh` と `./scripts/ci/pre-pr-report.sh` を実行済みにする
+- `scripts/pr-open` で PR作成前チェック（`pre-pr` 証跡 + HEAD一致）を通す
 - 検証コマンドと結果を記録
 - 回帰リスクとロールバック手順を記載
 - 機密情報の混入がないことを確認

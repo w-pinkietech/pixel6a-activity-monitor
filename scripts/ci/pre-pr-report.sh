@@ -19,6 +19,7 @@ exit_code="$(sed -n 's/^exit_code=//p' "$status_file" | tail -n 1)"
 act_result="$(sed -n 's/^act_result=//p' "$status_file" | tail -n 1)"
 act_reason="$(sed -n 's/^act_reason=//p' "$status_file" | tail -n 1)"
 act_mode="$(sed -n 's/^act_mode=//p' "$status_file" | tail -n 1)"
+git_head_sha="$(sed -n 's/^git_head_sha=//p' "$status_file" | tail -n 1)"
 
 if [ -f "$log_file" ]; then
   log_tail="$(tail -n "$tail_lines" "$log_file")"
@@ -33,6 +34,7 @@ cat > "$report_file" <<EOF
 - Result: ${result:-UNKNOWN}
 - Exit Code: ${exit_code:-0}
 - Ran At: ${ran_at:-unknown}
+- Git Head SHA: ${git_head_sha:-unknown}
 - Act Mode: ${act_mode:-unknown}
 - Act Result: ${act_result:-UNKNOWN}
 - Act Reason: ${act_reason:-none}

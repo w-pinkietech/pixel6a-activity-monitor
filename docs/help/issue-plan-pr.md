@@ -39,8 +39,11 @@ subagentを使う場合:
 ## 3) PR
 
 - Planに基づいて実装する。
+- Issue実装を含むPRは、実行テスト完了前に作成しない。
+- PR作成は `scripts/pr-open` を使い、`pre-pr` 証跡とHEAD一致を確認してから開く。
 - PR本文で対象 Issue と Plan を明示する。
 - 変更の検証手順と結果を必ず残す。
+- 並列運用関連の変更では `./scripts/ci/test-3lane-smoke.sh` の結果も残す。
 - マージ前に回帰リスクを明示する。
 - Done条件は [Definition of Done](/reference/dod) を正本として扱う。
 

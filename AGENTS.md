@@ -64,6 +64,22 @@
 | PR準備 | `pr_preparer` | `prepare-pr` | `.local/prep.md` と gate pass |
 | マージ判定 | `pr_merger` | `merge-pr` | merge可否の判断 |
 
+## Main/Subagent Reporting Contract
+
+- main agent は orchestration と最終サマリを担当する。
+- subagent は完了時に報告Markdownを作成し、main agent へパスを共有する。
+- 報告ファイルの保存先: `.local/agent-reports/`
+- 命名規則: `<UTC timestamp>-<agent>-<scope>.md`
+- 推奨コマンド: `scripts/agent-report <agent> <scope> --task "<task summary>"`
+
+報告Markdownの必須項目:
+
+- Task / Scope
+- What changed
+- Validation
+- Risks / Follow-ups
+- Handoff to main agent
+
 エスカレーション:
 
 - 仕様衝突: `planner` に戻して plan を更新する。
@@ -84,6 +100,8 @@
 ## PR and Merge Rules
 
 - script-first contract: `scripts/pr` を正本とし、wrapper から呼び出す。
+- PR作成時は `gh pr create` 直実行ではなく `scripts/pr-open` を使う。
+- Issue実装を含むPRは、実行テスト完了（`pre-pr.status` が `PASS` かつ現HEAD一致）前に作成しない。
 - レビュー初期化: `scripts/pr-review <PR>`
 - 修正とゲート: `scripts/pr-prepare run <PR>`
 - 最終確認: `scripts/pr-merge verify <PR>`
@@ -96,6 +114,10 @@
 - PR前の最低ゲート:
   - `./scripts/ci/pre-pr.sh`
   - `./scripts/ci/pre-pr-report.sh`
+- PR作成前ゲート:
+  - `scripts/pr-open ...` が成功すること（`pre-pr` 証跡とHEAD一致を検証）
+- 並列運用関連の変更（`scripts/lane-monitor`, `scripts/pr-open`, `.codex/agents/*`, `docs/help/parallel-implementation.md`, `docs/tools/codex-multi-agent.md` など）では:
+  - `./scripts/ci/test-3lane-smoke.sh` を実行し、結果レポートをPR本文またはコメントに残す
 - 失敗時は修正して再実行し、緑になるまで次に進めない。
 - CIロジックは workflow 直書きではなく `scripts/ci/*.sh` を単一ソースとして扱う。
 - `scripts/pr-merge verify <PR>` では required checks を厳密判定する（0件または非passは失敗）。

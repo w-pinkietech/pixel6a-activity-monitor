@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  cat <<'USAGE'
+Usage:
+  scripts/pr-open [gh pr create options...]
+
+Policy:
+  - Requires .local/pre-pr.status with result=PASS
+  - Requires .local/pre-pr-report.md
+  - Requires current HEAD == git_head_sha recorded by pre-pr.sh
+USAGE
+}
+
+if [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
+  usage
+  exit 0
+fi
+
+command -v gh >/dev/null 2>&1 || {
+  echo "missing required command: gh" >&2
+  exit 1
+}
+
+status_file=".local/pre-pr.status"
+report_file=".local/pre-pr-report.md"
+
+if [ ! -f "$status_file" ]; then
+  echo "missing $status_file. run ./scripts/ci/pre-pr.sh first." >&2
+  exit 1
+fi
+
+if [ ! -f "$report_file" ]; then
+  echo "missing $report_file. run ./scripts/ci/pre-pr-report.sh first." >&2
+  exit 1
+fi
+
+result="$(sed -n 's/^result=//p' "$status_file" | tail -n 1)"
+recorded_sha="$(sed -n 's/^git_head_sha=//p' "$status_file" | tail -n 1)"
+current_sha="$(git rev-parse HEAD)"
+
+if [ "$result" != "PASS" ]; then
+  echo "pre-pr is not PASS (result=$result). run ./scripts/ci/pre-pr.sh again." >&2
+  exit 1
+fi
+
+if [ -z "$recorded_sha" ] || [ "$recorded_sha" = "unknown" ]; then
+  echo "pre-pr.status missing git_head_sha. rerun ./scripts/ci/pre-pr.sh." >&2
+  exit 1
+fi
+
+if [ "$recorded_sha" != "$current_sha" ]; then
+  echo "HEAD changed after pre-pr (status=$recorded_sha current=$current_sha)." >&2
+  echo "rerun ./scripts/ci/pre-pr.sh and ./scripts/ci/pre-pr-report.sh before opening PR." >&2
+  exit 1
+fi
+
+if ! grep -qE '^- Result: PASS$' "$report_file"; then
+  echo "pre-pr report does not contain PASS result: $report_file" >&2
+  exit 1
+fi
+
+echo "pr-open checks: PASS (head=$current_sha)"
+exec gh pr create "$@"

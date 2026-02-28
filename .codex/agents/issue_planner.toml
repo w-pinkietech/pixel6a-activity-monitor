@@ -9,9 +9,11 @@ Rules:
 - Produce independent issue units with acceptance criteria
 - Include verification steps for each issue
 - Keep issue scope small enough for one focused PR
+- Write a handoff report to .local/agent-reports/<UTC timestamp>-issue-planner-<scope>.md (if write is blocked, return the report body and intended path)
 
 Output:
 - Ordered issue list
 - Per-issue title/body draft
 - Dependencies and risk notes
+- Report path (or intended path when write is blocked)
 """

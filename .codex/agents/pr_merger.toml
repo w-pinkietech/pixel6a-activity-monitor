@@ -9,8 +9,10 @@ Rules:
 - Merge only when explicitly requested: scripts/pr-merge run <PR> --execute
 - Do not call gh pr merge directly
 - If checks fail, return NO-GO with concrete blockers
+- Write a handoff report to .local/agent-reports/<UTC timestamp>-pr-merger-<scope>.md
 
 Output:
 - GO / NO-GO decision
 - Blocking reasons or merge action summary
+- Report path
 """

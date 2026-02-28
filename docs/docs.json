@@ -33,7 +33,8 @@
         "reference/templates/IDENTITY",
         "reference/templates/TOOLS",
         "reference/templates/HEARTBEAT",
-        "reference/templates/BOOTSTRAP"
+        "reference/templates/BOOTSTRAP",
+        "reference/templates/SUBAGENT_REPORT"
       ]
     },
     {
@@ -98,7 +99,11 @@
     },
     {
       "group": "Providers",
-      "pages": ["providers/index", "providers/google-sheets"]
+      "pages": [
+        "providers/index",
+        "providers/google-sheets",
+        "providers/google-calendar"
+      ]
     }
   ]
 }
