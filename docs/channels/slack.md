@@ -21,6 +21,7 @@ title: "Slack (OpenClaw Managed)"
   - `distance_m`
   - `movement_level` (`low|medium|high`)
   - `event_count`
+  - `event_context`（JSON string, `event_count/top_events/timezone`）
 
 ## Delivery Rules (OpenClaw Side)
 
@@ -31,6 +32,7 @@ title: "Slack (OpenClaw Managed)"
 ## Human Message Rules
 
 - 人間向け通知は「期間」「活動レベル」「移動距離」「イベント数」を必須にする。
+- `event_context.top_events` は補助文脈として使い、`lat/lng` の代替にする。
 - 生の位置情報（`lat`,`lng`）は通知本文に出さない。
 - メッセージの詳細テンプレートは [OpenClaw Notification Contract](/gateway/openclaw-notification-contract) を正本にする。
 

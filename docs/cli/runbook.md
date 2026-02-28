@@ -74,15 +74,47 @@ P6AM_SHEETS_RANGE='raw!A:M' \
 ./openclaw/sheets_append.sh
 ```
 
-## 5. 判定・通知手動実行
+## 5. Google Calendar 参照の前提確認
+
+Calendar 参照は read-only で行う。`gog` で対象カレンダーを参照できる認証が必要。
 
 ```bash
-P6AM_JUDGE_NOW_UTC="$(date -u +%Y-%m-%dT%H:%M:%SZ)" ./openclaw/activity_judge.sh
+P6AM_GOG_BIN=gog \
+P6AM_GOG_ACCOUNT=you@example.com \
+P6AM_CALENDAR_ID=primary \
+P6AM_CALENDAR_TZ=Asia/Tokyo \
+gog -a "$P6AM_GOG_ACCOUNT" calendar events list "$P6AM_CALENDAR_ID" --limit 10
 ```
+
+期待結果:
+
+- 対象日のイベントが最大10件まで取得できる。
+- 取得不可の場合は認証設定と `P6AM_CALENDAR_ID` を見直す。
+
+## 6. 判定・通知手動実行（Calendar 文脈あり）
+
+```bash
+P6AM_GOG_BIN=gog \
+P6AM_CALENDAR_ID=primary \
+P6AM_CALENDAR_TZ=Asia/Tokyo \
+P6AM_JUDGE_NOW_UTC="$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+./openclaw/activity_judge.sh
+```
+
+固定フォーマット確認:
+
+```bash
+jq -r '.event_context | fromjson | {event_count, top_events, timezone}' tmp/activity-latest.json
+```
+
+Calendar 取得失敗時:
+
+- 判定ジョブは継続し、位置情報ベースの `movement_level` は出力される。
+- 失敗理由は `calendar context fallback: ...` としてログに残る。
 
 通知送信は OpenClaw 側で実行する。通知メッセージ仕様は `/gateway/openclaw-notification-contract` を参照。
 
-## 6. OpenClaw cron 登録・更新
+## 7. OpenClaw cron 登録・更新
 
 `collect-sheets` / `judge-notify` の定期実行は次のスクリプトで登録する。
 
@@ -105,7 +137,7 @@ P6AM_TAILNET_TARGET=google-pixel-6a \
 openclaw cron list --all --json --url ws://127.0.0.1:18791 --token your-token
 ```
 
-## 7. 運用ジョブ手動実行
+## 8. 運用ジョブ手動実行
 
 ```bash
 P6AM_TAILNET_TARGET=google-pixel-6a ./openclaw/tailnet_precheck.sh
@@ -114,7 +146,7 @@ P6AM_TAILNET_TARGET=google-pixel-6a ./openclaw/judge_notify_job.sh
 ./openclaw/log_rotate.sh
 ```
 
-## 8. ロールバック
+## 9. ロールバック
 
 - 自動実行を止める。
 - 問題のある変更をrevertする。

@@ -8,3 +8,4 @@ title: "Providers"
 # Providers
 
 - [Google Sheets](/providers/google-sheets)
+- [Google Calendar](/providers/google-calendar)
