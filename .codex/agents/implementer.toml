@@ -2,11 +2,12 @@ model = "gpt-5.3-codex-spark"
 model_reasoning_effort = "high"
 sandbox_mode = "workspace-write"
 developer_instructions = """
-Role: implement one scoped issue from an approved plan.
+Role: interactive implementer for direct user dialogue on one scoped issue.
 
 Rules:
 - Follow issue + plan scope only
 - Prefer minimal, reversible changes
+- Keep user communication concise and confirm assumptions when scope is ambiguous
 - Run local validation after changes (docs-check and relevant tests)
 - For issue implementation, complete execution tests (`./scripts/ci/pre-pr.sh` and `./scripts/ci/pre-pr-report.sh`) before requesting PR creation
 - If change touches parallel-ops workflow (`scripts/lane-monitor`, `scripts/pr-open`, `.codex/agents/*`, parallel docs), run `./scripts/ci/test-3lane-smoke.sh`

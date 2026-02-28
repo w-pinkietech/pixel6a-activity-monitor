@@ -21,9 +21,22 @@ Page type: how-to
 - `.codex/agents/planner.toml`
 - `.codex/agents/issue_planner.toml`
 - `.codex/agents/implementer.toml`
+- `.codex/agents/implementer_bg.toml`
 - `.codex/agents/pr_reviewer.toml`
 - `.codex/agents/pr_preparer.toml`
 - `.codex/agents/pr_merger.toml`
+
+## Agent Split Policy
+
+エージェントは用途で分離する。
+
+- 対話用: `implementer`
+  - ユーザーと直接対話しながらスコープを詰める通常実装
+- 背景実行用 (unified_exec): `implementer_bg`
+  - `lane-worker` から非対話で流す実装
+
+`lane-worker` は `codex exec --enable unified_exec` で実行し、
+背景実行では `implementer_bg` を使う。
 
 ## Verify
 
@@ -102,6 +115,7 @@ main agent は次を担当する。
 - lane 全体の優先度と依存順の管理
 - subagent の報告Markdown収集
 - plan/issue/pr の統合サマリ作成
+- ユーザー向け最終報告で `Implemented Features` セクションを必ず記載
 
 subagent は完了時に `.local/agent-reports/` へ報告Markdownを作成し、main agent にパスを返す。
 
@@ -177,6 +191,12 @@ scripts/lane-monitor start --interval 60
 scripts/lane-monitor status
 ```
 
+出力には次が含まれる。
+
+- `tmux`: `codex-lanes` セッション内の lane 状態（`CODEX` / `RUN:<cmd>` / `DEAD` / `NO_SESSION` など）
+- `last_report`: lane ごとの最新 subagent report ファイル名
+- `age`: 最新 report からの経過時間
+
 5. 停止する。
 
 ```bash
@@ -187,6 +207,47 @@ scripts/lane-monitor stop
 
 - フォアグラウンド確認は `scripts/lane-monitor watch`。
 - 1回だけ取得する場合は `scripts/lane-monitor once`。
+- `gh` が未認証でも監視は動作する（Issue/PR 列は `AUTH_ERR` または `NO_GH` 表示）。
+
+## Issue-to-PR Background Worker
+
+Issue 起点で「実装 -> 検証 -> PR作成」までを lane ごとにバックグラウンド実行する場合は
+`scripts/lane-worker` を使う。
+
+前提:
+
+- `.local/lanes.tsv` に `lane / issue / pr / owner / note` を設定済み
+- `codex` が使える
+
+1. 1 lane だけ実行する。
+
+```bash
+scripts/lane-worker run lane1
+```
+
+2. すべての lane を同時実行する。
+
+```bash
+scripts/lane-worker run-all
+```
+
+3. 実行状態を確認する。
+
+```bash
+scripts/lane-worker status
+```
+
+4. lane を停止する。
+
+```bash
+scripts/lane-worker stop lane1
+```
+
+補足:
+
+- 実行ログは `.local/lane-worker/<lane>.log` に保存される。
+- `run` 完了後に `sync-pr` が自動実行され、作成済みPR番号を `.local/lanes.tsv` の `pr` 列へ反映する。
+- 手動同期する場合は `scripts/lane-worker sync-pr <lane>` を使う。
 
 ## Lane Closeout
 

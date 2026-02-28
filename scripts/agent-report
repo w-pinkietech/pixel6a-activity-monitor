@@ -79,6 +79,10 @@ cat > "$out_path" <<EOF
 ## Task / Scope
 - ${task_text}
 
+## Implemented Features
+- Feature:
+- User-visible behavior:
+
 ## What Changed
 - Files:
 - Behavior:
