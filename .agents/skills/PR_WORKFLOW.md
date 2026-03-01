@@ -7,6 +7,11 @@
 skills は手順を実行し、maintainer は判断を担う。  
 コマンドが通ったことと、実装品質の妥当性は別で評価する。
 
+運用原則:
+
+- `review-pr` / `prepare-pr` / `merge-pr` は background terminal で直列実行する。
+- maintainer への確認は停止条件ヒット時、または `--execute` を伴う実マージ時に限定する。
+
 必須順序:
 
 1. `review-pr`（レビュー専用）

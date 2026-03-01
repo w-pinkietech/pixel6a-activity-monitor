@@ -10,6 +10,11 @@
 
 See `PR_WORKFLOW.md` for execution order and rules.
 
+## Execution Principle
+
+- PR系 skill（`review-pr` / `prepare-pr` / `merge-pr`）は対応 subagent が background terminal で直列実行する。
+- 人間への確認は、停止条件ヒットまたは実マージ実行時に限定する。
+
 ## Role Mapping
 
 | Codex Agent | Skill | Primary Output |

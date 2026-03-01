@@ -108,7 +108,7 @@ branch_checked_out_in_worktree() {
 
 pr_meta_json() {
   local pr="$1"
-  gh pr view "$pr" --json number,title,state,isDraft,author,baseRefName,headRefName,headRefOid,headRepository,url
+  gh pr view "$pr" --json number,title,state,isDraft,author,baseRefName,headRefName,headRefOid,headRepository,url,commits
 }
 
 write_pr_meta_files() {
@@ -235,6 +235,83 @@ required_checks_json() {
   printf '%s\n' "$checks_json"
 }
 
+git_operation_in_progress() {
+  local marker
+  for marker in rebase-merge rebase-apply MERGE_HEAD CHERRY_PICK_HEAD REVERT_HEAD BISECT_LOG; do
+    if [ -e "$(git rev-parse --git-path "$marker")" ]; then
+      return 0
+    fi
+  done
+  return 1
+}
+
+ensure_prepare_workspace_clean() {
+  local pr="$1"
+
+  if git_operation_in_progress; then
+    echo "prepare-init failed: git operation is in progress in this worktree"
+    echo "rerun from clean state: scripts/pr-review $pr"
+    exit 1
+  fi
+
+  local unresolved
+  unresolved="$(git diff --name-only --diff-filter=U || true)"
+  if [ -n "$unresolved" ]; then
+    echo "prepare-init failed: unresolved merge entries exist"
+    printf '%s\n' "$unresolved"
+    echo "rerun from clean state: scripts/pr-review $pr"
+    exit 1
+  fi
+
+  if ! git diff --quiet || ! git diff --cached --quiet; then
+    echo "prepare-init failed: tracked file changes exist in worktree"
+    echo "rerun from clean state: scripts/pr-review $pr"
+    exit 1
+  fi
+}
+
+assert_pr_commit_set_matches_review() {
+  local pr="$1"
+  local current_json="$2"
+
+  require_artifact .local/review-context.env
+  require_artifact .local/review-commits.txt
+
+  # shellcheck disable=SC1091
+  source .local/review-context.env
+
+  local current_head_sha current_commit_count
+  current_head_sha="$(printf '%s\n' "$current_json" | jq -r .headRefOid)"
+  current_commit_count="$(printf '%s\n' "$current_json" | jq '.commits | length')"
+
+  if [ "${PR_HEAD_SHA_AT_REVIEW:-}" != "$current_head_sha" ]; then
+    echo "prepare-init failed: PR head changed since review-init"
+    echo "review_head=${PR_HEAD_SHA_AT_REVIEW:-unknown}"
+    echo "current_head=$current_head_sha"
+    echo "rerun: scripts/pr-review $pr"
+    exit 1
+  fi
+
+  if [ "${PR_COMMIT_COUNT_AT_REVIEW:-}" != "$current_commit_count" ]; then
+    echo "prepare-init failed: PR commit count changed since review-init"
+    echo "review_count=${PR_COMMIT_COUNT_AT_REVIEW:-unknown}"
+    echo "current_count=$current_commit_count"
+    echo "rerun: scripts/pr-review $pr"
+    exit 1
+  fi
+
+  local current_commits_file
+  current_commits_file="$(mktemp .local/review-commits.current.XXXXXX)"
+  printf '%s\n' "$current_json" | jq -r '.commits[]?.oid' > "$current_commits_file"
+  if ! diff -u .local/review-commits.txt "$current_commits_file" >/dev/null; then
+    rm -f "$current_commits_file"
+    echo "prepare-init failed: PR commit set changed since review-init"
+    echo "rerun: scripts/pr-review $pr"
+    exit 1
+  fi
+  rm -f "$current_commits_file"
+}
+
 validate_required_checks_strict() {
   local checks_json="$1"
   local required_count
@@ -260,6 +337,7 @@ cmd_review_init() {
 
   local pr
   pr="$(normalize_pr "$1")"
+  cleanup_worktree "$pr"
   enter_worktree "$pr" true
 
   local json
@@ -270,10 +348,16 @@ cmd_review_init() {
 
   local merge_base
   merge_base="$(git merge-base origin/main "pr-$pr")"
+  local pr_head_sha review_commit_count
+  pr_head_sha="$(printf '%s\n' "$json" | jq -r .headRefOid)"
+  review_commit_count="$(printf '%s\n' "$json" | jq '.commits | length')"
+  printf '%s\n' "$json" | jq -r '.commits[]?.oid' > .local/review-commits.txt
 
   cat > .local/review-context.env <<EOF_ENV
 PR_NUMBER=$pr
 MERGE_BASE=$merge_base
+PR_HEAD_SHA_AT_REVIEW=$pr_head_sha
+PR_COMMIT_COUNT_AT_REVIEW=$review_commit_count
 REVIEW_STARTED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 EOF_ENV
 
@@ -292,6 +376,8 @@ cmd_review_validate_artifacts() {
 
   require_artifact .local/review.md
   require_artifact .local/review.json
+  require_artifact .local/review-context.env
+  require_artifact .local/review-commits.txt
   require_artifact .local/pr-meta.env
 
   require_cmd jq
@@ -312,15 +398,32 @@ cmd_prepare_init() {
   local pr
   pr="$(normalize_pr "$1")"
   enter_worktree "$pr" false
+  ensure_prepare_workspace_clean "$pr"
 
   require_artifact .local/review.md
   require_artifact .local/review.json
+  require_artifact .local/review-context.env
+  require_artifact .local/review-commits.txt
   require_artifact .local/pr-meta.env
+
+  local current_json current_head_sha fetched_head_sha
+  current_json="$(pr_meta_json "$pr")"
+  assert_pr_commit_set_matches_review "$pr" "$current_json"
+  write_pr_meta_files "$current_json"
+  current_head_sha="$(printf '%s\n' "$current_json" | jq -r .headRefOid)"
 
   # shellcheck disable=SC1091
   source .local/pr-meta.env
 
   git fetch origin "pull/$pr/head:pr-$pr" --force
+  fetched_head_sha="$(git rev-parse "pr-$pr")"
+  if [ "$fetched_head_sha" != "$current_head_sha" ]; then
+    echo "prepare-init failed: fetched PR head does not match metadata head"
+    echo "metadata_head=$current_head_sha"
+    echo "fetched_head=$fetched_head_sha"
+    echo "rerun: scripts/pr-review $pr"
+    exit 1
+  fi
   git checkout -B "pr-$pr-prep" "pr-$pr"
   git fetch origin main
   git rebase origin/main

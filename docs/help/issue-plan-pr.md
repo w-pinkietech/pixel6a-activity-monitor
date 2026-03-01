@@ -27,7 +27,9 @@ title: "Issue, Plan, PR Flow"
 
 - `docs/experiments/plans/` に計画ファイルを作る。
 - frontmatter で `owner`, `status`, `last_updated` を管理する。
-- 最低限、`Goals`, `Non-goals`, `Implementation Plan`, `Tests` を書く。
+- 最低限、`Goals`, `Non-goals`, `Decision Log`, `Implementation Plan`, `Autonomy Contract`, `Verification Matrix` を書く。
+- `Autonomy Contract` で「AIが自走してよい範囲」と「人間確認が必要な停止条件」を固定する。
+- `Verification Matrix` には PR前に再実行するコマンドと期待結果を明記する。
 - 実装が進んだら `status` を `draft` から `in-progress` に更新する。
 - 完了後は `status` を `complete` に更新する。
 

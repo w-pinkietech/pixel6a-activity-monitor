@@ -18,6 +18,11 @@ PR を read-only で評価し、`prepare-pr` 向けハンドオフ成果物を�
 - push/mergeしない。
 - 残すべき差分を勝手に編集しない。
 
+## Execution Context
+
+- `pr_reviewer` は background terminal 実行を標準にする。
+- main/user への途中確認は行わず、完了時または停止条件ヒット時のみ報告する。
+
 ## Execution Contract
 
 1. 初期化:
@@ -57,3 +62,4 @@ scripts/pr review-validate-artifacts <PR>
 
 - findings は `BLOCKER / IMPORTANT / NIT` のみ。
 - `BLOCKER` と `IMPORTANT` は修正可能な指示を書く。
+- 停止条件に該当しない限り、レビュー成果物作成まで自走して完了させる。
